@@ -12,6 +12,7 @@ import Reports from "./pages/reports";
 import Settings from "./pages/settings";
 import Home from "./pages/home";
 import Map from "./Map";
+import Tanks from './pages/tanks';
 
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
         { path: "receipts", element: <Receipts /> },
         { path: "dispatches", element: <Dispatches /> },
         { path: "entrances", element: <Entrances /> },
+        { path: "tanks", element: <Tanks /> },
         { path: "map", element: <Map /> },
         { path: "reports", element: <Reports /> },
         { path: "settings", element: <Settings /> },

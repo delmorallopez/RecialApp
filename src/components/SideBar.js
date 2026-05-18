@@ -52,6 +52,11 @@ function SideBar({ isActive }) {
           Entrances
         </Link>
 
+        <Link to="/tanks" className="menu-item">
+         <img className="iconsidebar" src={imageLogistics} alt="" />
+          Tanks
+        </Link>
+
         <Link to="/map" className="menu-item">
           <img className="iconsidebar" src={imageLogistics} alt="" />
           Logistics
