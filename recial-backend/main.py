@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine, Base
-from routes import customers, suppliers, receipts, entrances, tanks
+from routes import customers, suppliers, receipts, entrances, tanks, dispatches, reports
 from models.customers import Customer
 from models.suppliers import Supplier  # ← this line must exist
 
@@ -34,6 +34,8 @@ app.include_router(suppliers.router)
 app.include_router(receipts.router)
 app.include_router(entrances.router)
 app.include_router(tanks.router)
+app.include_router(dispatches.router)
+app.include_router(reports.router)
 
 # -----------------------------------------------
 # Health check
