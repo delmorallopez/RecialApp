@@ -4,6 +4,9 @@ from sqlalchemy.orm import Session, joinedload
 from datetime import date
 import io
 
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
 from database import get_db
 from models.entrances import Entrance
 from models.dispatches import Dispatch
@@ -14,11 +17,6 @@ router = APIRouter(prefix="/reports", tags=["Reports"])
 
 def excel_mass_balance(entrances, dispatches, year: int) -> bytes:
     """Generate the Mass Balance Excel file and return bytes."""
-    try:
-        from openpyxl import Workbook
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-    except ImportError:
-        raise RuntimeError("openpyxl is required: pip install openpyxl")
 
     wb = Workbook()
     ws = wb.active
