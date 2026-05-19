@@ -435,29 +435,50 @@ export default function Receipts() {
 
       {/* ── Delete Confirmation ── */}
       {deleteTarget && (
-        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
-          <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Delete Receipt</h2>
-              <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
-            </div>
-            <p className="confirm-text">
-              Are you sure you want to delete receipt{" "}
-              <strong>#{deleteTarget.id}</strong> from{" "}
-              <strong>{supplierName(deleteTarget)}</strong>?
-              This action cannot be undone.
-            </p>
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
-                Cancel
-              </button>
-              <button className="btn-danger" onClick={confirmDelete}>
-                Delete
-              </button>
-            </div>
-          </div>
+  <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+    <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h2>Delete Receipt</h2>
+        <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
+      </div>
+      <p className="confirm-text">
+        Are you sure you want to delete receipt{" "}
+        <strong>#{deleteTarget.receipt_code || deleteTarget.id}</strong> from{" "}
+        <strong>{supplierName(deleteTarget)}</strong>?
+      </p>
+
+      {/* Cascade warning */}
+      {deleteTarget.entrance_id && (
+        <div style={{
+          margin: "0 24px 16px",
+          background: "#fef2f2",
+          border: "1.5px solid #fecaca",
+          borderRadius: "10px",
+          padding: "14px 16px",
+        }}>
+          <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>
+            ⚠ Traceability Warning
+          </p>
+          <p style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, lineHeight: 1.6 }}>
+            This receipt is assigned to entrance batch{" "}
+            <strong>#{deleteTarget.entrance_id}</strong>.
+            Deleting it will remove it from that batch and reduce the batch quantity.
+            If the entrance is linked to a dispatch, the traceability chain will be broken.
+          </p>
         </div>
       )}
+
+      <div className="modal-actions">
+        <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
+          Cancel
+        </button>
+        <button className="btn-danger" onClick={confirmDelete}>
+          Delete anyway
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 
     </div>
   );

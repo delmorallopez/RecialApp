@@ -509,23 +509,55 @@ export default function Entrances() {
 
       {/* Delete Confirmation */}
       {deleteTarget && (
-        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
-          <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Delete Entrance</h2>
-              <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
-            </div>
-            <p className="confirm-text">
-              Are you sure you want to delete batch <strong>{deleteTarget.batch_id}</strong>?
-              The receipts will be unlocked and available again.
-            </p>
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button className="btn-danger" onClick={confirmDelete}>Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+  <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+    <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-header">
+        <h2>Delete Entrance Batch</h2>
+        <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
+      </div>
+      <p className="confirm-text">
+        Are you sure you want to delete batch <strong>{deleteTarget.batch_id}</strong>?
+      </p>
+
+      {/* Always show cascade info for entrances */}
+      <div style={{
+        margin: "0 24px 16px",
+        background: "#fef2f2",
+        border: "1.5px solid #fecaca",
+        borderRadius: "10px",
+        padding: "14px 16px",
+      }}>
+        <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>
+          ⚠ Traceability Warning — Cascade Effects
+        </p>
+        <ul style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, paddingLeft: "18px", lineHeight: 1.8 }}>
+          <li>
+            <strong>{deleteTarget.receipts?.length || 0} receipt{deleteTarget.receipts?.length !== 1 ? "s" : ""}</strong>{" "}
+            will be unlocked and become available again
+          </li>
+          {deleteTarget.quantity_kg > 0 && (
+            <li>
+              <strong>{deleteTarget.quantity_kg?.toFixed(0)} kg</strong> will be removed from the tank stock
+            </li>
+          )}
+          <li>
+            Any <strong>dispatch</strong> linked to this batch will lose this entrance reference —
+            breaking the traceability chain
+          </li>
+        </ul>
+      </div>
+
+      <div className="modal-actions">
+        <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
+          Cancel
+        </button>
+        <button className="btn-danger" onClick={confirmDelete}>
+          Delete anyway
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

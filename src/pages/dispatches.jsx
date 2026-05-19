@@ -598,11 +598,48 @@ export default function Dispatches() {
             </div>
             <p className="confirm-text">
               Are you sure you want to delete dispatch <strong>{deleteTarget.batch_id}</strong>?
-              The tank stock will be restored.
             </p>
+
+            {/* Cascade warning */}
+            <div style={{
+              margin: "0 24px 16px",
+              background: "#fef2f2",
+              border: "1.5px solid #fecaca",
+              borderRadius: "10px",
+              padding: "14px 16px",
+            }}>
+              <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>
+                ⚠ Traceability Warning — Cascade Effects
+              </p>
+              <ul style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, paddingLeft: "18px", lineHeight: 1.8 }}>
+                <li>
+                  <strong>{deleteTarget.quantity} kg</strong> sold will be restored to tank stock
+                </li>
+                {deleteTarget.disposal && (
+                  <li>
+                    Disposal record of <strong>{deleteTarget.disposal.quantity} kg</strong> will also be deleted
+                  </li>
+                )}
+                {deleteTarget.entrances?.length > 0 && (
+                  <li>
+                    <strong>{deleteTarget.entrances.length} entrance batch{deleteTarget.entrances.length !== 1 ? "es" : ""}</strong>{" "}
+                    will be unlinked from this dispatch
+                  </li>
+                )}
+                <li>
+                  The ISCC traceability record for post number{" "}
+                  <strong>{deleteTarget.post_number || "N/A"}</strong> will be permanently lost
+                </li>
+              </ul>
+            </div>
+
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button className="btn-danger" onClick={confirmDelete}>Delete</button>
+                <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
+                  Cancel
+                </button>
+                <button className="btn-danger" onClick={confirmDelete}>
+                  Delete anyway
+                </button>
             </div>
           </div>
         </div>
