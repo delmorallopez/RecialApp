@@ -1,17 +1,17 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import date, datetime
+from datetime import date as date_type, datetime 
 
 
 class DisposalCreate(BaseModel):
-    date: date
+    date: date_type  
     quantity: int
     notes: Optional[str] = None
 
 
 class DisposalResponse(BaseModel):
     id: int
-    date: date
+    date: date_type  
     quantity: int
     notes: Optional[str] = None
     class Config:
@@ -45,7 +45,7 @@ class DispatchBase(BaseModel):
     post_number: Optional[int] = None
     customer_id: int
     tank_id: Optional[int] = None
-    date: date
+    date: date_type  
     raw_material: Optional[str] = "UCO"
     value_gei: Optional[int] = 1
     quantity: int
@@ -53,7 +53,7 @@ class DispatchBase(BaseModel):
 
 class DispatchCreate(DispatchBase):
     customer_id: int    # required
-    date: date          # required
+    date: date_type           # required
     quantity: int       # required
     entrance_ids: list[int] = []          # entrance batches to link
     disposal: Optional[DisposalCreate] = None  # optional disposal record
@@ -63,10 +63,12 @@ class DispatchUpdate(BaseModel):
     post_number: Optional[int] = None
     customer_id: Optional[int] = None
     tank_id: Optional[int] = None
-    date: Optional[date] = None
+    date: Optional[date_type] = None 
     raw_material: Optional[str] = None
     value_gei: Optional[int] = None
     quantity: Optional[int] = None
+    entrance_ids: Optional[list[int]] = None   
+    disposal: Optional[DisposalCreate] = None  #
 
 
 class DispatchResponse(DispatchBase):

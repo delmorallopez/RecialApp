@@ -132,8 +132,60 @@ def update_dispatch(
     dispatch = db.query(Dispatch).filter(Dispatch.id == dispatch_id).first()
     if not dispatch:
         raise HTTPException(status_code=404, detail="Dispatch not found")
-    for field, value in dispatch_data.model_dump(exclude_unset=True).items():
+
+    # Handle tank stock adjustment if quantity or tank changes
+    old_qty = dispatch.quantity or 0
+    old_disposal_qty = dispatch.disposal.quantity if dispatch.disposal else 0
+    old_tank_id = dispatch.tank_id
+
+    # Update simple fields
+    for field, value in dispatch_data.model_dump(
+        exclude_unset=True, exclude={"entrance_ids", "disposal"}
+    ).items():
         setattr(dispatch, field, value)
+
+    # Update entrance links
+    if dispatch_data.entrance_ids is not None:
+        entrances = []
+        for eid in dispatch_data.entrance_ids:
+            entrance = db.query(Entrance).filter(Entrance.id == eid).first()
+            if entrance:
+                entrances.append(entrance)
+        dispatch.entrances = entrances
+
+    # Update disposal
+    if dispatch_data.disposal is not None:
+        if dispatch.disposal:
+            dispatch.disposal.date = dispatch_data.disposal.date
+            dispatch.disposal.quantity = dispatch_data.disposal.quantity
+            dispatch.disposal.notes = dispatch_data.disposal.notes
+        else:
+            db.add(Disposal(
+                dispatch_id=dispatch_id,
+                date=dispatch_data.disposal.date,
+                quantity=dispatch_data.disposal.quantity,
+                notes=dispatch_data.disposal.notes,
+            ))
+    elif dispatch_data.disposal is None and "disposal" in dispatch_data.model_fields_set:
+        # Explicitly set to None — remove disposal
+        if dispatch.disposal:
+            db.delete(dispatch.disposal)
+
+    # Recalculate tank stock
+    new_qty = dispatch.quantity or 0
+    new_disposal_qty = dispatch.disposal.quantity if dispatch.disposal else 0
+    new_tank_id = dispatch.tank_id
+
+    if old_tank_id:
+        old_tank = db.query(Tank).filter(Tank.id == old_tank_id).first()
+        if old_tank:
+            old_tank.stock = (old_tank.stock or 0) + old_qty + old_disposal_qty
+
+    if new_tank_id:
+        new_tank = db.query(Tank).filter(Tank.id == new_tank_id).first()
+        if new_tank:
+            new_tank.stock = max(0, (new_tank.stock or 0) - new_qty - new_disposal_qty)
+
     db.commit()
     return load_dispatch(dispatch_id, db)
 

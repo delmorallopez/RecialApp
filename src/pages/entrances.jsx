@@ -3,10 +3,11 @@ import {
   getEntrances,
   createEntrance,
   deleteEntrance,
+  updateEntrance,
 } from "../services/entrancesServices";
 import { getReceipts } from "../services/receiptsServices";
-import "../stylecss/customers.css";
 import { getTanks } from "../services/tanksServices";
+import "../stylecss/customers.css";
 
 const EMPTY_FORM = {
   supplier_type: "A",
@@ -17,6 +18,12 @@ const EMPTY_FORM = {
   filter_date_to: "",
 };
 
+const EMPTY_EDIT_FORM = {
+  date: "",
+  tank_id: "",
+  receipt_ids: [],
+};
+
 export default function Entrances() {
   const [entrances, setEntrances] = useState([]);
   const [total, setTotal] = useState(0);
@@ -25,23 +32,29 @@ export default function Entrances() {
 
   const [allReceipts, setAllReceipts] = useState([]);
   const [receiptsLoading, setReceiptsLoading] = useState(false);
+  const [tanks, setTanks] = useState([]);
 
   const [typeFilter, setTypeFilter] = useState("");
+
+  // Create modal
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
+
+  // Edit modal
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingEntrance, setEditingEntrance] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
+  const [editError, setEditError] = useState(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editReceipts, setEditReceipts] = useState([]); // available receipts for edit
+
+  // Detail view
   const [detailEntrance, setDetailEntrance] = useState(null);
+
+  // Delete
   const [deleteTarget, setDeleteTarget] = useState(null);
-
-  const [tanks, setTanks] = useState([]);
-
-  // Load tanks when component mounts
-  useEffect(() => {
-    getTanks()
-      .then((res) => setTanks(res.data.tanks.filter((t) => t.is_active)))
-      .catch(() => setError("Could not load tanks."));
-  }, []);
 
   // ── Fetch entrances ──────────────────────────────────────
   const fetchEntrances = useCallback(async () => {
@@ -60,18 +73,21 @@ export default function Entrances() {
     }
   }, [typeFilter]);
 
-  useEffect(() => {
-    fetchEntrances();
-  }, [fetchEntrances]);
+  useEffect(() => { fetchEntrances(); }, [fetchEntrances]);
 
-  // ── Load all unassigned receipts ─────────────────────────
+  // ── Load tanks ───────────────────────────────────────────
+  useEffect(() => {
+    getTanks()
+      .then((res) => setTanks(res.data.tanks.filter((t) => t.is_active)))
+      .catch(() => {});
+  }, []);
+
+  // ── Load unassigned receipts (create mode) ───────────────
   const loadAllReceipts = async () => {
     setReceiptsLoading(true);
     try {
       const res = await getReceipts({ limit: 500 });
-      console.log("Sample receipt:", res.data.receipts[0]); // testing
       const unassigned = res.data.receipts.filter((r) => !r.entrance_id);
-      console.log("Receipt supplier types:", unassigned.map(r => r.supplier?.supplier_type)); // ← testing
       setAllReceipts(unassigned);
     } catch {
       setFormError("Could not load receipts.");
@@ -80,24 +96,38 @@ export default function Entrances() {
     }
   };
 
-  // ── Filter receipts in the modal ─────────────────────────
-  // THE FIX: compare supplier_type from the supplier object correctly
-  const filteredReceipts = allReceipts.filter((r) => {
-// NEW — explicit for both types
-  const supplierType = r.supplier?.supplier_type?.toLowerCase();
-  if (!supplierType) return false; // skip if no supplier info
-  const rType = supplierType === "horeca" ? "A" 
-            : supplierType === "urban"  ? "B" 
-            : null;
-  if (!rType) return false;        // skip unknown types
+  // ── Load receipts for edit (unassigned + already in this entrance) ──
+  const loadReceiptsForEdit = async (entrance) => {
+    try {
+      const res = await getReceipts({ limit: 500 });
+      const available = res.data.receipts.filter(
+        (r) => !r.entrance_id || r.entrance_id === entrance.id
+      );
+      setEditReceipts(available);
+    } catch {
+      setEditError("Could not load receipts.");
+    }
+  };
 
-  if (rType !== form.supplier_type) return false;
+  // ── Filter receipts by type in create modal ──────────────
+  const filteredReceipts = allReceipts.filter((r) => {
+    const sType = r.supplier?.supplier_type?.toLowerCase();
+    const rType = sType === "horeca" ? "A" : sType === "urban" ? "B" : null;
+    if (rType !== form.supplier_type) return false;
     if (form.filter_date_from && r.date < form.filter_date_from) return false;
     if (form.filter_date_to && r.date > form.filter_date_to) return false;
     return true;
   });
 
-  // ── Modal helpers ────────────────────────────────────────
+  // ── Filter receipts by type in edit modal ───────────────
+  const filteredEditReceipts = editReceipts.filter((r) => {
+    if (!editingEntrance) return false;
+    const sType = r.supplier?.supplier_type?.toLowerCase();
+    const rType = sType === "horeca" ? "A" : sType === "urban" ? "B" : null;
+    return rType === editingEntrance.supplier_type;
+  });
+
+  // ── Create modal helpers ─────────────────────────────────
   const openAdd = () => {
     setForm(EMPTY_FORM);
     setFormError(null);
@@ -113,27 +143,59 @@ export default function Entrances() {
   };
 
   const toggleReceipt = (id) => {
-    setForm((f) => {
-      const ids = f.receipt_ids.includes(id)
+    setForm((f) => ({
+      ...f,
+      receipt_ids: f.receipt_ids.includes(id)
         ? f.receipt_ids.filter((r) => r !== id)
-        : [...f.receipt_ids, id];
-      return { ...f, receipt_ids: ids };
-    });
+        : [...f.receipt_ids, id],
+    }));
   };
 
-  const selectAll = () => {
+  const selectAll = () =>
     setForm((f) => ({ ...f, receipt_ids: filteredReceipts.map((r) => r.id) }));
-  };
 
-  const clearSelection = () => {
+  const clearSelection = () =>
     setForm((f) => ({ ...f, receipt_ids: [] }));
-  };
 
   const selectedKg = allReceipts
     .filter((r) => form.receipt_ids.includes(r.id))
-    .reduce((sum, r) => sum + (r.quantity_kg || 0), 0);
+    .reduce((s, r) => s + (r.quantity_kg || 0), 0);
 
-  // ── Submit ───────────────────────────────────────────────
+  // ── Edit modal helpers ───────────────────────────────────
+  const openEdit = (entrance) => {
+    setEditingEntrance(entrance);
+    setEditForm({
+      date: entrance.date || "",
+      tank_id: entrance.tank_id || "",
+      receipt_ids: entrance.receipts?.map((r) => r.id) || [],
+    });
+    setEditError(null);
+    setEditModalOpen(true);
+    loadReceiptsForEdit(entrance);
+  };
+
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEditingEntrance(null);
+    setEditForm(EMPTY_EDIT_FORM);
+    setEditError(null);
+    setEditReceipts([]);
+  };
+
+  const toggleEditReceipt = (id) => {
+    setEditForm((f) => ({
+      ...f,
+      receipt_ids: f.receipt_ids.includes(id)
+        ? f.receipt_ids.filter((r) => r !== id)
+        : [...f.receipt_ids, id],
+    }));
+  };
+
+  const editSelectedKg = editReceipts
+    .filter((r) => editForm.receipt_ids.includes(r.id))
+    .reduce((s, r) => s + (r.quantity_kg || 0), 0);
+
+  // ── Create submit ────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.receipt_ids.length === 0) {
@@ -152,9 +214,39 @@ export default function Entrances() {
       closeModal();
       fetchEntrances();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Something went wrong.");
+      const detail = err.response?.data?.detail;
+      setFormError(
+        typeof detail === "string" ? detail : "Something went wrong."
+      );
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ── Edit submit ──────────────────────────────────────────
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (editForm.receipt_ids.length === 0) {
+      setEditError("At least one receipt is required.");
+      return;
+    }
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await updateEntrance(editingEntrance.id, {
+        date: editForm.date,
+        tank_id: editForm.tank_id ? parseInt(editForm.tank_id) : null,
+        receipt_ids: editForm.receipt_ids,
+      });
+      closeEditModal();
+      fetchEntrances();
+    } catch (err) {
+      const detail = err.response?.data?.detail;
+      setEditError(
+        typeof detail === "string" ? detail : "Something went wrong."
+      );
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -189,7 +281,39 @@ export default function Entrances() {
     </span>
   );
 
-  const totalKg = entrances.reduce((sum, e) => sum + (e.quantity_kg || 0), 0);
+  const totalKg = entrances.reduce((s, e) => s + (e.quantity_kg || 0), 0);
+
+  // Shared receipt list item renderer
+  const ReceiptItem = ({ r, selected, onToggle }) => (
+    <div onClick={() => onToggle(r.id)} style={{
+      display: "flex", alignItems: "center", gap: "12px",
+      padding: "10px 14px",
+      background: selected ? "#f0fdf4" : "#fff",
+      cursor: "pointer", transition: "background 0.15s",
+      borderBottom: "1px solid #f3f4f6",
+    }}>
+      <div style={{
+        width: "18px", height: "18px", borderRadius: "4px", border: "2px solid",
+        borderColor: selected ? "#2d7a4f" : "#d1d5db",
+        background: selected ? "#2d7a4f" : "#fff",
+        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+      }}>
+        {selected && <span style={{ color: "#fff", fontSize: "11px", fontWeight: "800" }}>✓</span>}
+      </div>
+      <div style={{ flex: 1, display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+        <span style={{ fontWeight: "700", fontSize: "13px", fontFamily: "monospace", color: "#1a1a2e" }}>
+          {r.receipt_code || `#${r.id}`}
+        </span>
+        <span style={{ color: "#d1d5db" }}>·</span>
+        <span style={{ fontSize: "13px", color: "#374151" }}>{r.supplier?.name}</span>
+        <span style={{ color: "#d1d5db" }}>·</span>
+        <span style={{ fontSize: "13px", color: "#6b7280" }}>{formatDate(r.date)}</span>
+      </div>
+      <span style={{ fontWeight: "700", color: "#2d7a4f", fontSize: "14px", flexShrink: 0 }}>
+        {r.quantity_kg?.toFixed(1)} kg
+      </span>
+    </div>
+  );
 
   // ── Render ───────────────────────────────────────────────
   return (
@@ -227,7 +351,7 @@ export default function Entrances() {
           <thead>
             <tr>
               <th>Batch ID</th><th>Type</th><th>Date</th><th>Receipts</th>
-              <th>Start Date</th><th>Finish Date</th><th>Total (kg)</th><th>Tank</th><th>Actions</th>
+              <th>Start</th><th>Finish</th><th>Total (kg)</th><th>Tank</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -254,6 +378,7 @@ export default function Entrances() {
                   <td style={{ fontWeight: "700", color: "#2d7a4f" }}>{e.quantity_kg?.toFixed(1)} kg</td>
                   <td>{e.tank?.name || "—"}</td>
                   <td className="td-actions">
+                    <button className="btn-edit" onClick={() => openEdit(e)}>Edit</button>
                     <button className="btn-delete" onClick={() => setDeleteTarget(e)}>Delete</button>
                   </td>
                 </tr>
@@ -276,7 +401,7 @@ export default function Entrances() {
         </table>
       </div>
 
-      {/* ── Create Entrance Modal ── */}
+      {/* ── Create Modal ── */}
       {modalOpen && (
         <div className="modal-overlay" onClick={closeModal}>
           <div className="modal" style={{ maxWidth: "680px" }} onClick={(e) => e.stopPropagation()}>
@@ -286,7 +411,7 @@ export default function Entrances() {
             </div>
             <form className="modal-form" onSubmit={handleSubmit}>
 
-              {/* Type + Date */}
+              {/* Type + Date + Tank */}
               <div className="form-row">
                 <div className="form-group">
                   <label>Supplier Type <span className="required">*</span></label>
@@ -300,37 +425,9 @@ export default function Entrances() {
                           background: form.supplier_type === val ? "#f0fdf4" : "#fff",
                           color: form.supplier_type === val ? "#15803d" : "#374151",
                           fontWeight: "600", fontSize: "14px", cursor: "pointer",
-                        }}
-                      >{label}</button>
+                        }}>{label}</button>
                     ))}
                   </div>
-                </div>
-                {/* TANK SELECTOR HERE */}
-                <div className="form-group">
-                  <label>Assign to Tank</label>
-                  <select
-                    value={form.tank_id}
-                    onChange={(e) => setForm({ ...form, tank_id: e.target.value })}
-                    style={{
-                      padding: "11px 14px",
-                      border: "1.5px solid #e5e7eb",
-                      borderRadius: "9px",
-                      fontSize: "15px",
-                      color: "#374151",
-                      background: "#fff",
-                      width: "100%",
-                    }}
-                  >
-                    <option value="">Select a tank (optional)...</option>
-                    {tanks.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                        {t.capacity
-                          ? ` — ${t.stock || 0} / ${t.capacity} kg`
-                          : ` — ${t.stock || 0} kg`}
-                      </option>
-                    ))}
-                  </select>
                 </div>
                 <div className="form-group form-group--grow">
                   <label>Entrance Date <span className="required">*</span></label>
@@ -339,11 +436,23 @@ export default function Entrances() {
                 </div>
               </div>
 
-              {/* Date range filter for receipts */}
-              <div style={{
-                background: "#f8fafc", border: "1.5px solid #e5e7eb",
-                borderRadius: "10px", padding: "14px 16px",
-              }}>
+              {/* Tank */}
+              <div className="form-group">
+                <label>Assign to Tank</label>
+                <select value={form.tank_id}
+                  onChange={(e) => setForm({ ...form, tank_id: e.target.value })}
+                  style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
+                  <option value="">Select a tank (optional)...</option>
+                  {tanks.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name}{t.capacity ? ` — ${t.stock || 0} / ${t.capacity} kg` : ` — ${t.stock || 0} kg`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Date range filter */}
+              <div style={{ background: "#f8fafc", border: "1.5px solid #e5e7eb", borderRadius: "10px", padding: "14px 16px" }}>
                 <p style={{ fontSize: "13px", fontWeight: "600", color: "#6b7280", margin: "0 0 10px" }}>
                   Filter receipts by date range (optional)
                 </p>
@@ -398,58 +507,23 @@ export default function Entrances() {
                 </div>
 
                 {receiptsLoading ? (
-                  <div style={{ padding: "20px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>
-                    Loading receipts...
-                  </div>
+                  <div style={{ padding: "20px", textAlign: "center", color: "#9ca3af", fontSize: "14px" }}>Loading receipts...</div>
                 ) : filteredReceipts.length === 0 ? (
-                  <div style={{
-                    padding: "24px", textAlign: "center", background: "#f8fafc",
-                    borderRadius: "8px", border: "1.5px solid #e5e7eb", color: "#9ca3af", fontSize: "14px",
-                  }}>
-                    No unassigned {form.supplier_type === "A" ? "Horeca" : "Urban"} receipts
-                    {(form.filter_date_from || form.filter_date_to) ? " for the selected date range" : " available"}
+                  <div style={{ padding: "24px", textAlign: "center", background: "#f8fafc", borderRadius: "8px", border: "1.5px solid #e5e7eb", color: "#9ca3af", fontSize: "14px" }}>
+                    No unassigned {form.supplier_type === "A" ? "Horeca" : "Urban"} receipts available
                   </div>
                 ) : (
                   <div style={{ border: "1.5px solid #e5e7eb", borderRadius: "8px", maxHeight: "260px", overflowY: "auto" }}>
-                    {filteredReceipts.map((r, idx) => {
-                      const selected = form.receipt_ids.includes(r.id);
-                      return (
-                        <div key={r.id} onClick={() => toggleReceipt(r.id)} style={{
-                          display: "flex", alignItems: "center", gap: "12px",
-                          padding: "11px 14px",
-                          borderBottom: idx < filteredReceipts.length - 1 ? "1px solid #f3f4f6" : "none",
-                          background: selected ? "#f0fdf4" : "#fff",
-                          cursor: "pointer", transition: "background 0.15s",
-                        }}>
-                          <div style={{
-                            width: "18px", height: "18px", borderRadius: "4px", border: "2px solid",
-                            borderColor: selected ? "#2d7a4f" : "#d1d5db",
-                            background: selected ? "#2d7a4f" : "#fff",
-                            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                          }}>
-                            {selected && <span style={{ color: "#fff", fontSize: "11px", fontWeight: "800" }}>✓</span>}
-                          </div>
-                          <div style={{ flex: 1, display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-                            <span style={{ fontWeight: "700", fontSize: "13px", fontFamily: "monospace", color: "#1a1a2e" }}>
-                              {r.receipt_code || `#${r.id}`}
-                            </span>
-                            <span style={{ color: "#d1d5db" }}>·</span>
-                            <span style={{ fontSize: "13px", color: "#374151" }}>{r.supplier?.name}</span>
-                            <span style={{ color: "#d1d5db" }}>·</span>
-                            <span style={{ fontSize: "13px", color: "#6b7280" }}>{formatDate(r.date)}</span>
-                          </div>
-                          <span style={{ fontWeight: "700", color: "#2d7a4f", fontSize: "14px", flexShrink: 0 }}>
-                            {r.quantity_kg?.toFixed(1)} kg
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {filteredReceipts.map((r) => (
+                      <ReceiptItem key={r.id} r={r}
+                        selected={form.receipt_ids.includes(r.id)}
+                        onToggle={toggleReceipt} />
+                    ))}
                   </div>
                 )}
               </div>
 
               {formError && <p className="form-error">{formError}</p>}
-
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={closeModal}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={saving}>
@@ -461,7 +535,97 @@ export default function Entrances() {
         </div>
       )}
 
-      {/* Detail Modal */}
+      {/* ── Edit Modal ── */}
+      {editModalOpen && editingEntrance && (
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal" style={{ maxWidth: "680px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2>Edit Batch {editingEntrance.batch_id}</h2>
+                <p style={{ fontSize: "13px", color: "#6b7280", margin: "2px 0 0" }}>
+                  {editingEntrance.supplier_type === "A" ? "Horeca" : "Urban"} — Batch type cannot be changed
+                </p>
+              </div>
+              <button className="modal-close" onClick={closeEditModal}>✕</button>
+            </div>
+
+            {/* Traceability warning */}
+            <div style={{ margin: "0 24px", background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: "10px", padding: "12px 16px" }}>
+              <p style={{ fontWeight: "700", color: "#92400e", fontSize: "13px", margin: "0 0 4px" }}>
+                ⚠ Traceability Warning
+              </p>
+              <p style={{ fontSize: "13px", color: "#78350f", margin: 0 }}>
+                Changing receipts will recalculate the batch total and update tank stock. 
+                Any dispatches linked to this batch will reflect the new quantities.
+              </p>
+            </div>
+
+            <form className="modal-form" onSubmit={handleEditSubmit}>
+
+              {/* Date + Tank */}
+              <div className="form-row">
+                <div className="form-group form-group--grow">
+                  <label>Entrance Date</label>
+                  <input type="date" value={editForm.date}
+                    onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
+                </div>
+                <div className="form-group form-group--grow">
+                  <label>Tank</label>
+                  <select value={editForm.tank_id}
+                    onChange={(e) => setEditForm({ ...editForm, tank_id: e.target.value })}
+                    style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
+                    <option value="">No tank assigned</option>
+                    {tanks.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}{t.capacity ? ` — ${t.stock || 0} / ${t.capacity} kg` : ` — ${t.stock || 0} kg`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Receipt selection */}
+              <div className="form-group">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label>
+                    Receipts in this batch
+                    {editForm.receipt_ids.length > 0 && (
+                      <span style={{ marginLeft: "8px", color: "#2d7a4f", fontWeight: "700" }}>
+                        {editForm.receipt_ids.length} selected — {editSelectedKg.toFixed(1)} kg
+                      </span>
+                    )}
+                  </label>
+                </div>
+
+                {filteredEditReceipts.length === 0 ? (
+                  <div style={{ padding: "20px", textAlign: "center", color: "#9ca3af", fontSize: "14px",
+                    background: "#f8fafc", borderRadius: "8px", border: "1.5px solid #e5e7eb" }}>
+                    No receipts available for this batch type
+                  </div>
+                ) : (
+                  <div style={{ border: "1.5px solid #e5e7eb", borderRadius: "8px", maxHeight: "280px", overflowY: "auto" }}>
+                    {filteredEditReceipts.map((r) => (
+                      <ReceiptItem key={r.id} r={r}
+                        selected={editForm.receipt_ids.includes(r.id)}
+                        onToggle={toggleEditReceipt} />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {editError && <p className="form-error">{editError}</p>}
+              <div className="modal-actions">
+                <button type="button" className="btn-secondary" onClick={closeEditModal}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={editSaving}>
+                  {editSaving ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Detail Modal ── */}
       {detailEntrance && (
         <div className="modal-overlay" onClick={() => setDetailEntrance(null)}>
           <div className="modal" style={{ maxWidth: "560px" }} onClick={(e) => e.stopPropagation()}>
@@ -486,7 +650,7 @@ export default function Entrances() {
                 ))}
               </div>
               <p style={{ fontWeight: "600", fontSize: "13px", color: "#374151", marginBottom: "8px" }}>
-                Receipts in this batch ({detailEntrance.receipts?.length || 0})
+                Receipts ({detailEntrance.receipts?.length || 0})
               </p>
               <div style={{ border: "1.5px solid #e5e7eb", borderRadius: "8px", overflow: "hidden" }}>
                 {detailEntrance.receipts?.map((r, idx) => (
@@ -494,7 +658,6 @@ export default function Entrances() {
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "10px 14px",
                     borderBottom: idx < detailEntrance.receipts.length - 1 ? "1px solid #f3f4f6" : "none",
-                    background: "#fff",
                   }}>
                     <span style={{ fontWeight: "600", fontSize: "13px", fontFamily: "monospace" }}>{r.receipt_code || `#${r.id}`}</span>
                     <span style={{ fontSize: "13px", color: "#6b7280" }}>{formatDate(r.date)}</span>
@@ -507,57 +670,32 @@ export default function Entrances() {
         </div>
       )}
 
-      {/* Delete Confirmation */}
+      {/* ── Delete Confirmation ── */}
       {deleteTarget && (
-  <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
-    <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
-      <div className="modal-header">
-        <h2>Delete Entrance Batch</h2>
-        <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
-      </div>
-      <p className="confirm-text">
-        Are you sure you want to delete batch <strong>{deleteTarget.batch_id}</strong>?
-      </p>
-
-      {/* Always show cascade info for entrances */}
-      <div style={{
-        margin: "0 24px 16px",
-        background: "#fef2f2",
-        border: "1.5px solid #fecaca",
-        borderRadius: "10px",
-        padding: "14px 16px",
-      }}>
-        <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>
-          ⚠ Traceability Warning — Cascade Effects
-        </p>
-        <ul style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, paddingLeft: "18px", lineHeight: 1.8 }}>
-          <li>
-            <strong>{deleteTarget.receipts?.length || 0} receipt{deleteTarget.receipts?.length !== 1 ? "s" : ""}</strong>{" "}
-            will be unlocked and become available again
-          </li>
-          {deleteTarget.quantity_kg > 0 && (
-            <li>
-              <strong>{deleteTarget.quantity_kg?.toFixed(0)} kg</strong> will be removed from the tank stock
-            </li>
-          )}
-          <li>
-            Any <strong>dispatch</strong> linked to this batch will lose this entrance reference —
-            breaking the traceability chain
-          </li>
-        </ul>
-      </div>
-
-      <div className="modal-actions">
-        <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
-          Cancel
-        </button>
-        <button className="btn-danger" onClick={confirmDelete}>
-          Delete anyway
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Delete Entrance</h2>
+              <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
+            </div>
+            <p className="confirm-text">
+              Are you sure you want to delete batch <strong>{deleteTarget.batch_id}</strong>?
+            </p>
+            <div style={{ margin: "0 24px 16px", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: "10px", padding: "14px 16px" }}>
+              <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>⚠ Traceability Warning</p>
+              <ul style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, paddingLeft: "18px", lineHeight: 1.8 }}>
+                <li><strong>{deleteTarget.receipts?.length || 0} receipt{deleteTarget.receipts?.length !== 1 ? "s" : ""}</strong> will be unlocked</li>
+                <li><strong>{deleteTarget.quantity_kg?.toFixed(0)} kg</strong> will be removed from tank stock</li>
+                <li>Any dispatch linked to this batch will lose this entrance reference</li>
+              </ul>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="btn-danger" onClick={confirmDelete}>Delete anyway</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

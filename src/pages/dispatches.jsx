@@ -19,7 +19,6 @@ const EMPTY_FORM = {
   value_gei: 1,
   quantity: "",
   entrance_ids: [],
-  // Disposal
   has_disposal: true,
   disposal_date: new Date().toISOString().split("T")[0],
   disposal_quantity: "",
@@ -32,12 +31,11 @@ export default function Dispatches() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Dropdown data
   const [customers, setCustomers] = useState([]);
   const [entrances, setEntrances] = useState([]);
   const [tanks, setTanks] = useState([]);
 
-  // Modal
+  // Create/Edit modal (shared)
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -65,11 +63,9 @@ export default function Dispatches() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchDispatches();
-  }, [fetchDispatches]);
+  useEffect(() => { fetchDispatches(); }, [fetchDispatches]);
 
-  // ── Load dropdown data when modal opens ──────────────────
+  // ── Load dropdown data ───────────────────────────────────
   const loadDropdownData = async () => {
     try {
       const [custRes, entRes, tankRes] = await Promise.all([
@@ -99,14 +95,16 @@ export default function Dispatches() {
     setForm({
       customer_id: dispatch.customer_id || "",
       tank_id: dispatch.tank_id || "",
-      date: dispatch.date || "",
+      date: dispatch.date ? dispatch.date.split("T")[0] : "",
       post_number: dispatch.post_number || "",
       raw_material: dispatch.raw_material || "UCO",
       value_gei: dispatch.value_gei || 1,
       quantity: dispatch.quantity || "",
       entrance_ids: dispatch.entrances?.map((e) => e.id) || [],
       has_disposal: !!dispatch.disposal,
-      disposal_date: dispatch.disposal?.date || new Date().toISOString().split("T")[0],
+      disposal_date: dispatch.disposal?.date
+        ? dispatch.disposal.date.split("T")[0]
+        : new Date().toISOString().split("T")[0],
       disposal_quantity: dispatch.disposal?.quantity || "",
       disposal_notes: dispatch.disposal?.notes || "",
     });
@@ -122,14 +120,13 @@ export default function Dispatches() {
     setFormError(null);
   };
 
-  // Toggle entrance selection
   const toggleEntrance = (id) => {
-    setForm((f) => {
-      const ids = f.entrance_ids.includes(id)
+    setForm((f) => ({
+      ...f,
+      entrance_ids: f.entrance_ids.includes(id)
         ? f.entrance_ids.filter((e) => e !== id)
-        : [...f.entrance_ids, id];
-      return { ...f, entrance_ids: ids };
-    });
+        : [...f.entrance_ids, id],
+    }));
   };
 
   // ── Submit ───────────────────────────────────────────────
@@ -171,7 +168,8 @@ export default function Dispatches() {
       closeModal();
       fetchDispatches();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Something went wrong.");
+      const detail = err.response?.data?.detail;
+      setFormError(typeof detail === "string" ? detail : "Something went wrong.");
     } finally {
       setSaving(false);
     }
@@ -198,9 +196,7 @@ export default function Dispatches() {
   };
 
   const totalKg = dispatches.reduce((s, d) => s + (d.quantity || 0), 0);
-  const totalDisposal = dispatches.reduce(
-    (s, d) => s + (d.disposal?.quantity || 0), 0
-  );
+  const totalDisposal = dispatches.reduce((s, d) => s + (d.disposal?.quantity || 0), 0);
 
   // ── Render ───────────────────────────────────────────────
   return (
@@ -211,18 +207,13 @@ export default function Dispatches() {
         <div>
           <h1 className="customers-title">Dispatches</h1>
           <p className="customers-subtitle">
-            {total} dispatch{total !== 1 ? "es" : ""} —{" "}
-            <strong>{totalKg.toLocaleString()} kg</strong> sold
+            {total} dispatch{total !== 1 ? "es" : ""} — <strong>{totalKg.toLocaleString()} kg</strong> sold
             {totalDisposal > 0 && (
-              <span style={{ color: "#9ca3af" }}>
-                {" "}· {totalDisposal.toLocaleString()} kg disposal
-              </span>
+              <span style={{ color: "#9ca3af" }}> · {totalDisposal.toLocaleString()} kg disposal</span>
             )}
           </p>
         </div>
-        <button className="btn-primary" onClick={openAdd}>
-          + New Dispatch
-        </button>
+        <button className="btn-primary" onClick={openAdd}>+ New Dispatch</button>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
@@ -232,15 +223,8 @@ export default function Dispatches() {
         <table className="customers-table">
           <thead>
             <tr>
-              <th>Batch ID</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Post №</th>
-              <th>Tank</th>
-              <th>Quantity (kg)</th>
-              <th>Disposal (kg)</th>
-              <th>GEI</th>
-              <th>Actions</th>
+              <th>Batch ID</th><th>Date</th><th>Customer</th><th>Post №</th>
+              <th>Tank</th><th>Quantity (kg)</th><th>Disposal (kg)</th><th>GEI</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -251,49 +235,33 @@ export default function Dispatches() {
             ) : (
               dispatches.map((d) => (
                 <tr key={d.id} className="table-row">
-                  <td>
-                    <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "14px", color: "#1a1a2e" }}>
-                      {d.batch_id}
-                    </span>
-                  </td>
+                  <td><span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "14px" }}>{d.batch_id}</span></td>
                   <td style={{ fontWeight: "500" }}>{formatDate(d.date)}</td>
                   <td className="td-name">{d.customer?.name || "—"}</td>
                   <td style={{ fontFamily: "monospace" }}>{d.post_number || "—"}</td>
                   <td>{d.tank?.name || "—"}</td>
-                  <td style={{ fontWeight: "700", color: "#2d7a4f" }}>
-                    {d.quantity?.toLocaleString()} kg
-                  </td>
+                  <td style={{ fontWeight: "700", color: "#2d7a4f" }}>{d.quantity?.toLocaleString()} kg</td>
                   <td>
                     {d.disposal ? (
-                      <span style={{
-                        background: "#fef3c7", color: "#92400e",
-                        padding: "3px 10px", borderRadius: "999px",
-                        fontSize: "12px", fontWeight: "600",
-                      }}>
+                      <span style={{ background: "#fef3c7", color: "#92400e", padding: "3px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "600" }}>
                         {d.disposal.quantity} kg
                       </span>
-                    ) : (
-                      <span style={{ color: "#9ca3af", fontSize: "13px" }}>—</span>
-                    )}
+                    ) : <span style={{ color: "#9ca3af", fontSize: "13px" }}>—</span>}
                   </td>
                   <td>
-                    <span style={{
-                      background: "#f0fdf4", color: "#15803d",
-                      padding: "3px 10px", borderRadius: "999px",
-                      fontSize: "12px", fontWeight: "600",
-                    }}>
+                    <span style={{ background: "#f0fdf4", color: "#15803d", padding: "3px 10px", borderRadius: "999px", fontSize: "12px", fontWeight: "600" }}>
                       {d.value_gei}
                     </span>
                   </td>
                   <td className="td-actions">
                     <button className="btn-edit" onClick={() => setDetailDispatch(d)}>View</button>
+                    <button className="btn-edit" onClick={() => openEdit(d)}>Edit</button>
                     <button className="btn-delete" onClick={() => setDeleteTarget(d)}>Delete</button>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
-
           {dispatches.length > 0 && (
             <tfoot>
               <tr style={{ background: "#f8fafc", borderTop: "2px solid #e5e7eb" }}>
@@ -313,12 +281,20 @@ export default function Dispatches() {
         </table>
       </div>
 
-      {/* ── Create / Edit Modal ── */}
+      {/* ── Create / Edit Modal (shared) ── */}
       {modalOpen && (
         <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" style={{ maxWidth: "680px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{editingDispatch ? `Edit ${editingDispatch.batch_id}` : "New Dispatch"}</h2>
+          <div className="modal" style={{ maxWidth: "680px", maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
+              <div>
+                <h2>{editingDispatch ? `Edit ${editingDispatch.batch_id}` : "New Dispatch"}</h2>
+                {editingDispatch && (
+                  <p style={{ fontSize: "12px", color: "#9ca3af", margin: "2px 0 0" }}>
+                    Batch ID cannot be changed
+                  </p>
+                )}
+              </div>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
 
@@ -328,15 +304,11 @@ export default function Dispatches() {
               <div className="form-row">
                 <div className="form-group form-group--grow">
                   <label>Customer <span className="required">*</span></label>
-                  <select
-                    value={form.customer_id}
+                  <select value={form.customer_id}
                     onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
-                    style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}
-                  >
+                    style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
                     <option value="">Select customer...</option>
-                    {customers.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
@@ -350,11 +322,9 @@ export default function Dispatches() {
               <div className="form-row">
                 <div className="form-group form-group--grow">
                   <label>Tank</label>
-                  <select
-                    value={form.tank_id}
+                  <select value={form.tank_id}
                     onChange={(e) => setForm({ ...form, tank_id: e.target.value })}
-                    style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}
-                  >
+                    style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
                     <option value="">Select tank...</option>
                     {tanks.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -365,18 +335,16 @@ export default function Dispatches() {
                 </div>
                 <div className="form-group">
                   <label>Post Number (ISCC)</label>
-                  <input type="number" placeholder="e.g. 1"
-                    value={form.post_number}
+                  <input type="number" placeholder="e.g. 1" value={form.post_number}
                     onChange={(e) => setForm({ ...form, post_number: e.target.value })} />
                 </div>
               </div>
 
-              {/* Quantity + GEI + Raw material */}
+              {/* Quantity + Raw material + GEI */}
               <div className="form-row">
                 <div className="form-group form-group--grow">
                   <label>Quantity (kg) <span className="required">*</span></label>
-                  <input type="number" min="1" placeholder="kg to dispatch"
-                    value={form.quantity}
+                  <input type="number" min="1" placeholder="kg to dispatch" value={form.quantity}
                     onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
                 </div>
                 <div className="form-group">
@@ -416,8 +384,7 @@ export default function Dispatches() {
                           display: "flex", alignItems: "center", gap: "12px",
                           padding: "10px 14px",
                           borderBottom: idx < entrances.length - 1 ? "1px solid #f3f4f6" : "none",
-                          background: selected ? "#f0fdf4" : "#fff",
-                          cursor: "pointer",
+                          background: selected ? "#f0fdf4" : "#fff", cursor: "pointer",
                         }}>
                           <div style={{
                             width: "18px", height: "18px", borderRadius: "4px", border: "2px solid",
@@ -429,9 +396,7 @@ export default function Dispatches() {
                           </div>
                           <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "13px" }}>{en.batch_id}</span>
                           <span style={{ color: "#d1d5db" }}>·</span>
-                          <span style={{ fontSize: "13px", color: "#374151" }}>
-                            {en.supplier_type === "A" ? "Horeca" : "Urban"}
-                          </span>
+                          <span style={{ fontSize: "13px", color: "#374151" }}>{en.supplier_type === "A" ? "Horeca" : "Urban"}</span>
                           <span style={{ color: "#d1d5db" }}>·</span>
                           <span style={{ fontSize: "13px", color: "#6b7280" }}>{formatDate(en.date)}</span>
                           <span style={{ marginLeft: "auto", fontWeight: "700", color: "#2d7a4f", fontSize: "13px" }}>
@@ -444,16 +409,14 @@ export default function Dispatches() {
                 )}
               </div>
 
-              {/* Disposal section */}
+              {/* Disposal */}
               <div style={{
                 background: form.has_disposal ? "#fffbeb" : "#f8fafc",
                 border: `1.5px solid ${form.has_disposal ? "#fcd34d" : "#e5e7eb"}`,
                 borderRadius: "10px", padding: "16px",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: form.has_disposal ? "14px" : "0" }}>
-                  <p style={{ fontWeight: "700", fontSize: "14px", color: "#92400e", margin: 0 }}>
-                    Disposal Record
-                  </p>
+                  <p style={{ fontWeight: "700", fontSize: "14px", color: "#92400e", margin: 0 }}>Disposal Record</p>
                   <div style={{ display: "flex", gap: "8px" }}>
                     {[true, false].map((val) => (
                       <button key={String(val)} type="button"
@@ -464,10 +427,7 @@ export default function Dispatches() {
                           background: form.has_disposal === val ? "#fef3c7" : "#fff",
                           color: form.has_disposal === val ? "#92400e" : "#9ca3af",
                           fontWeight: "600", fontSize: "13px", cursor: "pointer",
-                        }}
-                      >
-                        {val ? "Yes" : "No"}
-                      </button>
+                        }}>{val ? "Yes" : "No"}</button>
                     ))}
                   </div>
                 </div>
@@ -482,22 +442,17 @@ export default function Dispatches() {
                       </div>
                       <div className="form-group form-group--grow">
                         <label style={{ fontSize: "13px", color: "#92400e" }}>Disposal Quantity (kg) <span className="required">*</span></label>
-                        <input type="number" min="1" placeholder="Residue in kg"
-                          value={form.disposal_quantity}
+                        <input type="number" min="1" placeholder="Residue in kg" value={form.disposal_quantity}
                           onChange={(e) => setForm({ ...form, disposal_quantity: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-group">
                       <label style={{ fontSize: "13px", color: "#92400e" }}>Notes</label>
-                      <input type="text" placeholder="Any notes about the disposal..."
-                        value={form.disposal_notes}
+                      <input type="text" placeholder="Any notes about the disposal..." value={form.disposal_notes}
                         onChange={(e) => setForm({ ...form, disposal_notes: e.target.value })} />
                     </div>
                     {form.quantity && form.disposal_quantity && (
-                      <div style={{
-                        background: "#fff", borderRadius: "8px", padding: "10px 14px",
-                        border: "1px solid #fcd34d", fontSize: "13px",
-                      }}>
+                      <div style={{ background: "#fff", borderRadius: "8px", padding: "10px 14px", border: "1px solid #fcd34d", fontSize: "13px" }}>
                         <span style={{ color: "#6b7280" }}>Total tank deduction: </span>
                         <strong style={{ color: "#dc2626" }}>
                           {(parseInt(form.quantity || 0) + parseInt(form.disposal_quantity || 0)).toLocaleString()} kg
@@ -511,7 +466,7 @@ export default function Dispatches() {
                 )}
               </div>
 
-              {formError && <p className="form-error">{formError}</p>}
+              {formError && <p className="form-error">{typeof formError === "string" ? formError : "Validation error."}</p>}
 
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={closeModal}>Cancel</button>
@@ -548,8 +503,6 @@ export default function Dispatches() {
                   </div>
                 ))}
               </div>
-
-              {/* Entrance batches */}
               {detailDispatch.entrances?.length > 0 && (
                 <>
                   <p style={{ fontWeight: "600", fontSize: "13px", color: "#374151", marginBottom: "8px" }}>
@@ -569,8 +522,6 @@ export default function Dispatches() {
                   </div>
                 </>
               )}
-
-              {/* Disposal */}
               {detailDispatch.disposal && (
                 <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: "10px", padding: "14px 16px" }}>
                   <p style={{ fontWeight: "700", fontSize: "13px", color: "#92400e", margin: "0 0 10px" }}>Disposal</p>
@@ -588,7 +539,7 @@ export default function Dispatches() {
         </div>
       )}
 
-      {/* Delete Confirmation */}
+      {/* ── Delete Confirmation ── */}
       {deleteTarget && (
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
@@ -599,47 +550,22 @@ export default function Dispatches() {
             <p className="confirm-text">
               Are you sure you want to delete dispatch <strong>{deleteTarget.batch_id}</strong>?
             </p>
-
-            {/* Cascade warning */}
-            <div style={{
-              margin: "0 24px 16px",
-              background: "#fef2f2",
-              border: "1.5px solid #fecaca",
-              borderRadius: "10px",
-              padding: "14px 16px",
-            }}>
-              <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>
-                ⚠ Traceability Warning — Cascade Effects
-              </p>
+            <div style={{ margin: "0 24px 16px", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: "10px", padding: "14px 16px" }}>
+              <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>⚠ Traceability Warning</p>
               <ul style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, paddingLeft: "18px", lineHeight: 1.8 }}>
-                <li>
-                  <strong>{deleteTarget.quantity} kg</strong> sold will be restored to tank stock
-                </li>
+                <li><strong>{deleteTarget.quantity} kg</strong> sold will be restored to tank stock</li>
                 {deleteTarget.disposal && (
-                  <li>
-                    Disposal record of <strong>{deleteTarget.disposal.quantity} kg</strong> will also be deleted
-                  </li>
+                  <li>Disposal record of <strong>{deleteTarget.disposal.quantity} kg</strong> will also be deleted</li>
                 )}
                 {deleteTarget.entrances?.length > 0 && (
-                  <li>
-                    <strong>{deleteTarget.entrances.length} entrance batch{deleteTarget.entrances.length !== 1 ? "es" : ""}</strong>{" "}
-                    will be unlinked from this dispatch
-                  </li>
+                  <li><strong>{deleteTarget.entrances.length} entrance batch{deleteTarget.entrances.length !== 1 ? "es" : ""}</strong> will be unlinked</li>
                 )}
-                <li>
-                  The ISCC traceability record for post number{" "}
-                  <strong>{deleteTarget.post_number || "N/A"}</strong> will be permanently lost
-                </li>
+                <li>ISCC traceability record for post number <strong>{deleteTarget.post_number || "N/A"}</strong> will be permanently lost</li>
               </ul>
             </div>
-
             <div className="modal-actions">
-                <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
-                  Cancel
-                </button>
-                <button className="btn-danger" onClick={confirmDelete}>
-                  Delete anyway
-                </button>
+              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="btn-danger" onClick={confirmDelete}>Delete anyway</button>
             </div>
           </div>
         </div>
@@ -647,6 +573,3 @@ export default function Dispatches() {
     </div>
   );
 }
- 
-
-

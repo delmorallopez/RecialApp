@@ -123,18 +123,75 @@ def create_entrance(entrance_data: EntranceCreate, db: Session = Depends(get_db)
 
 
 @router.patch("/{entrance_id}", response_model=EntranceResponse)
-def update_entrance(entrance_id: int, entrance_data: EntranceUpdate, db: Session = Depends(get_db)):
+def update_entrance(
+    entrance_id: int,
+    entrance_data: EntranceUpdate,
+    db: Session = Depends(get_db)
+):
     entrance = db.query(Entrance).filter(Entrance.id == entrance_id).first()
     if not entrance:
         raise HTTPException(status_code=404, detail="Entrance not found")
-    for field, value in entrance_data.model_dump(exclude_unset=True).items():
+
+    # Update simple fields
+    for field, value in entrance_data.model_dump(
+        exclude_unset=True, exclude={"receipt_ids"}
+    ).items():
         setattr(entrance, field, value)
+
+    # Handle receipt reassignment if provided
+    if entrance_data.receipt_ids is not None:
+        # Unlock all current receipts
+        for receipt in entrance.receipts:
+            receipt.entrance_id = None
+
+        # Validate and lock new receipts
+        new_receipts = []
+        for rid in entrance_data.receipt_ids:
+            receipt = db.query(Receipt).options(
+                joinedload(Receipt.supplier)
+            ).filter(Receipt.id == rid).first()
+            if not receipt:
+                raise HTTPException(status_code=404, detail=f"Receipt #{rid} not found")
+            if receipt.entrance_id and receipt.entrance_id != entrance_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Receipt #{rid} is already assigned to another entrance"
+                )
+            receipt_type = "A" if receipt.supplier.supplier_type == "Horeca" else "B"
+            if receipt_type != entrance.supplier_type:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Receipt #{rid} type {receipt_type} doesn't match batch type {entrance.supplier_type}"
+                )
+            new_receipts.append(receipt)
+
+        # Lock new receipts
+        total_kg = 0
+        dates = []
+        for receipt in new_receipts:
+            receipt.entrance_id = entrance_id
+            total_kg += receipt.quantity_kg
+            dates.append(receipt.date)
+
+        # Recalculate totals
+        if dates:
+            entrance.quantity_kg = total_kg
+            entrance.start_date = min(dates)
+            entrance.finish_date = max(dates)
+
+        # Update tank stock if tank assigned
+        if entrance.tank_id:
+            tank = db.query(Tank).filter(Tank.id == entrance.tank_id).first()
+            if tank:
+                # Subtract old quantity, add new
+                old_qty = entrance.quantity_kg or 0
+                tank.stock = max(0, (tank.stock or 0) - old_qty + total_kg)
+
     db.commit()
     return db.query(Entrance).options(
         joinedload(Entrance.receipts),
         joinedload(Entrance.tank)
     ).filter(Entrance.id == entrance_id).first()
-
 
 @router.delete("/{entrance_id}", status_code=204)
 def delete_entrance(entrance_id: int, db: Session = Depends(get_db)):
