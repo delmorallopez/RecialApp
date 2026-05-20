@@ -1,0 +1,305 @@
+/* â”€â”€ Dashboard Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.dash-page {
+    padding: 32px 40px;
+    max-width: 1500px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #f3f4f6;
+    min-height: 100vh;
+  }
+  
+  /* â”€â”€ Loading / Error â”€â”€ */
+  .dash-loading, .dash-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: 16px;
+    color: #6b7280;
+    font-size: 15px;
+  }
+  
+  .dash-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #2d7a4f;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  
+  @keyframes spin { to { transform: rotate(360deg); } }
+  
+  /* â”€â”€ Header â”€â”€ */
+  .dash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .dash-title {
+    font-size: 30px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin: 0 0 4px;
+  }
+  
+  .dash-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+  }
+  
+  .dash-year-select {
+    padding: 9px 14px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+    background: #fff;
+    cursor: pointer;
+  }
+  
+  .dash-quick-btn {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    color: #fff;
+    transition: opacity 0.2s;
+  }
+  .dash-quick-btn:hover { opacity: 0.85; }
+  .dash-quick-btn.green  { background: #2d7a4f; }
+  .dash-quick-btn.blue   { background: #1d4ed8; }
+  .dash-quick-btn.amber  { background: #d97706; }
+  
+  /* â”€â”€ KPI Cards â”€â”€ */
+  .dash-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  
+  .dash-kpi-card {
+    background: #fff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  
+  .dash-kpi-card:hover {
+    box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    transform: translateY(-1px);
+  }
+  
+  .dash-kpi-card.dash-kpi-alert {
+    border-color: #fcd34d;
+    background: #fffbeb;
+  }
+  
+  .dash-kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  
+  .dash-kpi-value {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0 0 2px;
+    line-height: 1;
+  }
+  
+  .dash-kpi-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin: 0 0 2px;
+  }
+  
+  .dash-kpi-sub {
+    font-size: 11px;
+    color: #9ca3af;
+    margin: 0;
+  }
+  
+  /* â”€â”€ Main grid â”€â”€ */
+  .dash-main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+  }
+  
+  .dash-left, .dash-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  /* â”€â”€ Card â”€â”€ */
+  .dash-card {
+    background: #fff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 22px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  
+  .dash-card-header {
+    margin-bottom: 18px;
+  }
+  
+  .dash-card-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 3px;
+  }
+  
+  .dash-card-header p {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 0;
+  }
+  
+  /* â”€â”€ Calendar â”€â”€ */
+  .dash-cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+    margin-bottom: 4px;
+  }
+  
+  .dash-cal-day-hdr {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #9ca3af;
+    padding: 4px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  
+  .dash-cal-cell {
+    min-height: 44px;
+    border-radius: 8px;
+    padding: 4px;
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    transition: background 0.15s;
+  }
+  
+  .dash-cal-cell--active {
+    cursor: pointer;
+  }
+  
+  .dash-cal-cell--active:hover {
+    background: #f3f4f6;
+  }
+  
+  .dash-cal-cell--today .dash-cal-date {
+    background: #2d7a4f;
+    color: #fff !important;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .dash-cal-cell--selected {
+    background: #f0fdf4 !important;
+    border: 1.5px solid #86efac;
+  }
+  
+  .dash-cal-date {
+    font-size: 12px;
+    font-weight: 500;
+    color: #374151;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .dash-cal-dots {
+    display: flex;
+    gap: 2px;
+    justify-content: center;
+  }
+  
+  .dash-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  
+  .dash-cal-nav {
+    background: #f3f4f6;
+    border: none;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    cursor: pointer;
+    color: #374151;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  
+  .dash-cal-nav:hover { background: #e5e7eb; }
+  
+  .dash-cal-detail {
+    margin-top: 12px;
+    background: #f8fafc;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  
+  .dash-cal-detail p {
+    margin: 0 0 4px;
+  }
+  
+  /* â”€â”€ Responsive â”€â”€ */
+  @media (max-width: 1100px) {
+    .dash-main-grid {
+      grid-template-columns: 1fr;
+    }
+    .dash-right {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+  }
+  
+  @media (max-width: 768px) {
+    .dash-page { padding: 20px 16px; }
+    .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .dash-right { grid-template-columns: 1fr; }
+  }
