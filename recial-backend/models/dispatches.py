@@ -30,4 +30,4 @@ class Dispatch(Base):
     customer = relationship("Customer", backref="dispatches")
     tank = relationship("Tank", backref="dispatches")
     entrances = relationship("Entrance", secondary=dispatch_entrances, backref="dispatches")
-    disposal = relationship("Disposal", back_populates="dispatch", uselist=False)
+    disposal = relationship("Disposal", back_populates="dispatch", uselist=False, cascade="all, delete-orphan")  # ← deletes disposal when dispatch is deleted

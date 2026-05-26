@@ -5,19 +5,39 @@
 	font-family: 'Segoe UI', system-ui, sans-serif;
   }
   
-  /* â”€â”€ App shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   body {
 	background-color: #f3f4f6;
 	color: #1a1a2e;
 	-webkit-font-smoothing: antialiased;
   }
   
+  /* ── App shell ── */
   .app {
 	display: flex;
 	min-height: 100vh;
   }
   
-  /* â”€â”€ Main content area â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Sidebar ── */
+  .sidebar {
+	flex: 0 0 255px;
+	width: 255px;
+	min-height: 100vh;
+	background: linear-gradient(180deg, #3a7a54 0%, #2d5a3d 60%, #1e3d2a 100%);
+	position: sticky;
+	top: 0;
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	overflow-y: auto;
+	overflow-x: hidden;
+	scrollbar-width: none;
+  }
+  
+  .sidebar::-webkit-scrollbar {
+	display: none;
+  }
+  
+  /* ── Main content ── */
   .content {
 	flex: 1 1 0;
 	background-color: #f3f4f6;
@@ -25,98 +45,27 @@
 	overflow-y: auto;
   }
   
-  /* â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  .sidebar {
-	flex: 0 0 240px;
-	width: 240px;
-	min-height: 100vh;
-	background-color: #496149;
-	padding: 1.5rem 0 1rem 0;
-	display: flex;
-	flex-direction: column;
-	position: sticky;
-	top: 0;
-	height: 100vh;
-	overflow-y: auto;
-  }
-  
-  .sidebar h3 {
-	color: #a8c5a0;
-	font-size: 0.7rem;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	margin: 1rem 1.5rem 0.4rem;
-  }
-  
-  .logoRecial {
-	width: 80%;
-	height: 110px;
-	object-fit: contain;
-	display: block;
-	margin: 0 auto 1.5rem;
-	padding: 0 1rem;
-  }
-  
-  /* â”€â”€ Sidebar menu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-  .sidebar .menu {
-	display: flex;
-	flex-direction: column;
-	gap: 2px;
-	padding: 0 0.75rem;
-  }
-  
-  .sidebar .menu .menu-item {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-	padding: 0.6rem 0.75rem;
-	color: #e8f0e8;
-	text-decoration: none;
-	font-size: 20px;
-	font-weight: 500;
-	border-radius: 8px;
-	transition: background 0.15s, color 0.15s;
-  }
-  
-  .sidebar .menu .menu-item:hover {
-	background-color: rgba(255, 255, 255, 0.12);
-	color: #fff;
-  }
-  
-  .sidebar .menu .menu-item.active {
-	background-color: rgba(255, 255, 255, 0.18);
-	color: #fff;
-	font-weight: 600;
-  }
-  
-  .sidebar .iconsidebar {
-	height: 32px;
-	width: 32px;
-	object-fit: contain;
-	flex-shrink: 0;
-  }
-  
-  /* â”€â”€ Hamburger toggle (mobile) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Hamburger toggle (mobile) ── */
   .menu-toggle {
 	display: none;
 	position: fixed;
-	top: 1.25rem;
-	right: 1.25rem;
-	width: 48px;
-	height: 48px;
+	top: 1rem;
+	right: 1rem;
+	width: 44px;
+	height: 44px;
 	border-radius: 50%;
-	background-color: #496149;
+	background: #3a7a54;
 	cursor: pointer;
 	z-index: 200;
-	box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+	box-shadow: 0 2px 8px rgba(0,0,0,0.25);
   }
   
   .hamburger {
 	position: relative;
-	top: calc(50% - 2px);
+	top: calc(50% - 1px);
 	left: 50%;
 	transform: translate(-50%, -50%);
-	width: 24px;
+	width: 22px;
   }
   
   .hamburger > span,
@@ -125,39 +74,22 @@
 	display: block;
 	position: absolute;
 	width: 100%;
-	height: 3px;
+	height: 2px;
 	border-radius: 99px;
 	background-color: #fff;
 	transition-duration: 0.25s;
   }
   
-  .hamburger > span::before {
-	content: '';
-	top: -7px;
-  }
+  .hamburger > span::before { content: ''; top: -6px; }
+  .hamburger > span::after  { content: ''; top: 6px;  }
   
-  .hamburger > span::after {
-	content: '';
-	top: 7px;
-  }
+  .menu-toggle.is-active .hamburger > span          { transform: rotate(45deg); }
+  .menu-toggle.is-active .hamburger > span::before  { top: 0; transform: rotate(0deg); }
+  .menu-toggle.is-active .hamburger > span::after   { top: 0; transform: rotate(90deg); }
   
-  .menu-toggle.is-active .hamburger > span {
-	transform: rotate(45deg);
-  }
-  
-  .menu-toggle.is-active .hamburger > span::before {
-	top: 0;
-	transform: rotate(0deg);
-  }
-  
-  .menu-toggle.is-active .hamburger > span::after {
-	top: 0;
-	transform: rotate(90deg);
-  }
-  
-  /* â”€â”€ Home page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Home page ── */
   .home-page {
-	padding: 48px 36px;
+	padding: 48px 40px;
 	text-align: center;
   }
   
@@ -173,9 +105,9 @@
 	color: #6b7280;
   }
   
-  /* â”€â”€ Generic "in progress" pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── Generic in-progress pages ── */
   .contentinprogress {
-	padding: 48px 36px;
+	padding: 48px 40px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -186,41 +118,27 @@
 	font-size: 1rem;
   }
   
-  .contentinprogress h2 {
-	font-size: 1.1rem;
-	font-weight: 600;
-	color: #374151;
+  /* ── Responsive ── */
+  @media (max-width: 1200px) {
+	.sidebar { flex: 0 0 230px; width: 230px; }
   }
   
-  /* â”€â”€ Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
   @media (max-width: 1024px) {
-	.sidebar {
-	  flex: 0 0 200px;
-	  width: 200px;
-	}
+	.sidebar { flex: 0 0 210px; width: 210px; }
   }
   
   @media (max-width: 768px) {
-	.menu-toggle {
-	  display: block;
-	}
-  
-	.content {
-	  padding-top: 5rem;
-	}
-  
+	.menu-toggle { display: flex; align-items: center; justify-content: center; }
+	.content { padding-top: 4rem; }
 	.sidebar {
 	  position: fixed;
 	  top: 0;
-	  left: -280px;
+	  left: -260px;
 	  height: 100vh;
-	  width: 260px;
+	  width: 255px;
 	  flex: none;
 	  z-index: 100;
 	  transition: left 0.2s ease;
 	}
-  
-	.sidebar.is-active {
-	  left: 0;
-	}
+	.sidebar.is-active { left: 0; }
   }

@@ -198,13 +198,17 @@ def delete_dispatch(dispatch_id: int, db: Session = Depends(get_db)):
 
     # Restore tank stock
     if dispatch.tank_id:
-       tank = db.query(Tank).filter(Tank.id == dispatch.tank_id).first()
-       if tank:
-         restore_amount = dispatch.quantity
-            # Also restore disposal quantity if it exists
-         if dispatch.disposal:
-            restore_amount += dispatch.disposal.quantity
+        tank = db.query(Tank).filter(Tank.id == dispatch.tank_id).first()
+        if tank:
+            restore_amount = dispatch.quantity or 0
+            if dispatch.disposal:
+                restore_amount += dispatch.disposal.quantity or 0
             tank.stock = (tank.stock or 0) + restore_amount
+
+    # Explicitly delete disposal first ← add this
+    if dispatch.disposal:
+        db.delete(dispatch.disposal)
+        db.flush()
 
     db.delete(dispatch)
     db.commit()
