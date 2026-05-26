@@ -7,6 +7,8 @@ class PickupPointBase(BaseModel):
     name: str
     address: Optional[str] = None
     is_active: Optional[bool] = True
+    latitude: Optional[float] = None   
+    longitude: Optional[float] = None 
 
 
 class PickupPointCreate(PickupPointBase):
@@ -17,6 +19,8 @@ class PickupPointUpdate(BaseModel):
     name: Optional[str] = None
     address: Optional[str] = None
     is_active: Optional[bool] = None
+    latitude: Optional[float] = None 
+    longitude: Optional[float] = None 
 
 
 class PickupPointResponse(PickupPointBase):
