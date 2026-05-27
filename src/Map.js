@@ -31,9 +31,9 @@ const defaultMapOptions = {
 };
 
 const apiOptions = {
-    "apiKey": "AIzaSyBV-nAoEPH5OItd12aVWcj1URCI5poWl10",
-    "version": "beta",
-    //libraries: ["places"]
+   //"apiKey": "AIzaSyBV-nAoEPH5OItd12aVWcj1URCI5poWl10",
+   //"version": "beta",
+   //libraries: ["places"]
 };
 
 const loader = new Loader(apiOptions);
