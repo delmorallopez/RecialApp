@@ -66,6 +66,16 @@ export default function Suppliers() {
   // Delete supplier
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  const [confirmClose, setConfirmClose] = useState(false);
+
+  const handleOverlayClick = () => {
+    const isDirty = form.name || form.cif || form.address ||
+                    newPickup.name || newPickup.address ||
+                    newPickup.latitude || newPickup.longitude;
+    if (isDirty) setConfirmClose(true);
+    else closeModal();
+  };
+
   // ── Fetch suppliers ──────────────────────────────────────
   const fetchSuppliers = useCallback(async () => {
     setLoading(true);
@@ -113,6 +123,7 @@ export default function Suppliers() {
     setEditingPickup(null);
     setPickupError(null);
     setModalOpen(true);
+    setConfirmClose(false); 
   };
 
   const openEdit = (supplier) => {
@@ -129,6 +140,7 @@ export default function Suppliers() {
     setPickupError(null);
     setModalOpen(true);
     loadPickupPoints(supplier.id);
+    setConfirmClose(false); 
   };
 
   const closeModal = () => {
@@ -140,6 +152,7 @@ export default function Suppliers() {
     setNewPickup(EMPTY_PICKUP);
     setEditingPickup(null);
     setPickupError(null);
+    setConfirmClose(false);
   };
 
   const handleSubmit = async (e) => {
@@ -455,14 +468,62 @@ export default function Suppliers() {
         </table>
       </div>
 
-      {/* ── Add / Edit Supplier Modal ── */}
+      {/* ── Add / Edit Modal ── */}
       {modalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal"
-            style={{ maxWidth: "700px", maxHeight: "92vh", overflowY: "auto" }}
-            onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={handleOverlayClick}>
+          <div
+            className="modal"
+            style={{ maxWidth: "600px", position: "relative" }}
+            onClick={(e) => e.stopPropagation()}
+          >
 
-            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
+            {/* ── Discard confirmation overlay ── */}
+            {confirmClose && (
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 10, borderRadius: "16px",
+              }}>
+                <div style={{
+                  background: "#fff", borderRadius: "14px",
+                  padding: "28px 32px", maxWidth: "360px",
+                  textAlign: "center",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                }}>
+                  <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
+                  <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
+                    Discard changes?
+                  </p>
+                  <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
+                    You have unsaved data. If you close now it will be lost.
+                  </p>
+                  <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                    <button
+                      onClick={() => setConfirmClose(false)}
+                      style={{
+                        padding: "10px 20px", borderRadius: "8px",
+                        border: "1.5px solid #e5e7eb", background: "#fff",
+                        color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                      }}
+                    >
+                      Keep editing
+                    </button>
+                    <button
+                      onClick={() => { setConfirmClose(false); closeModal(); }}
+                      style={{
+                        padding: "10px 20px", borderRadius: "8px",
+                        border: "none", background: "#dc2626",
+                        color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                      }}
+                    >
+                      Discard
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
               <h2>{editingSupplier ? "Edit Supplier" : "New Supplier"}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>

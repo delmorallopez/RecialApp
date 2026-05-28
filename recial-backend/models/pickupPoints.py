@@ -16,4 +16,4 @@ class PickupPoint(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    supplier = relationship("Supplier", backref="pickup_points")
+    supplier = relationship("Supplier", back_populates="pickup_points")

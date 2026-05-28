@@ -26,6 +26,14 @@ export default function Tanks() {
   const [saving, setSaving] = useState(false);
 
   const [deleteTarget, setDeleteTarget] = useState(null);
+ 
+  const [confirmClose, setConfirmClose] = useState(false);
+
+  const handleOverlayClick = () => {
+    const isDirty = form.name || form.capacity;
+    if (isDirty) setConfirmClose(true);
+    else closeModal();
+  };
 
   // ── Fetch tanks ──────────────────────────────────────────
   const fetchTanks = useCallback(async () => {
@@ -52,6 +60,7 @@ export default function Tanks() {
     setForm(EMPTY_FORM);
     setFormError(null);
     setModalOpen(true);
+    setConfirmClose(false);
   };
 
   const openEdit = (tank) => {
@@ -63,6 +72,7 @@ export default function Tanks() {
     });
     setFormError(null);
     setModalOpen(true);
+    setConfirmClose(false);
   };
 
   const closeModal = () => {
@@ -70,6 +80,7 @@ export default function Tanks() {
     setEditingTank(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setConfirmClose(false);
   };
 
   // ── Submit ───────────────────────────────────────────────
@@ -274,8 +285,55 @@ export default function Tanks() {
 
       {/* ── Add / Edit Modal ── */}
       {modalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={handleOverlayClick}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}
+        >
+          {/* ── Discard confirmation overlay ── */}
+          {confirmClose && (
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 10, borderRadius: "16px",
+              }}>
+                <div style={{
+                  background: "#fff", borderRadius: "14px",
+                  padding: "28px 32px", maxWidth: "360px",
+                  textAlign: "center",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                }}>
+                  <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
+                  <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
+                    Discard changes?
+                  </p>
+                  <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
+                    You have unsaved data. If you close now it will be lost.
+                  </p>
+                  <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                    <button
+                      onClick={() => setConfirmClose(false)}
+                      style={{
+                        padding: "10px 20px", borderRadius: "8px",
+                        border: "1.5px solid #e5e7eb", background: "#fff",
+                        color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                      }}
+                    >
+                      Keep editing
+                    </button>
+                    <button
+                      onClick={() => { setConfirmClose(false); closeModal(); }}
+                      style={{
+                        padding: "10px 20px", borderRadius: "8px",
+                        border: "none", background: "#dc2626",
+                        color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                      }}
+                    >
+                      Discard
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}  
             <div className="modal-header">
               <h2>{editingTank ? "Edit Tank" : "New Tank"}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>

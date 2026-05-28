@@ -1,5 +1,3 @@
-      
-
 import { useState, useEffect, useCallback } from "react";
 import {
   getCustomers,
@@ -30,6 +28,7 @@ export default function Customers() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -61,6 +60,7 @@ export default function Customers() {
     setEditingCustomer(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setConfirmClose(false);
     setModalOpen(true);
   };
 
@@ -74,6 +74,7 @@ export default function Customers() {
       email: customer.email || "",
     });
     setFormError(null);
+    setConfirmClose(false);
     setModalOpen(true);
   };
 
@@ -82,6 +83,18 @@ export default function Customers() {
     setEditingCustomer(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setConfirmClose(false);
+  };
+
+  // ── Overlay click — ask before closing if form is dirty ──
+  const handleOverlayClick = () => {
+    const isDirty = form.name || form.cif || form.email ||
+                    form.phone || form.address;
+    if (isDirty) {
+      setConfirmClose(true);
+    } else {
+      closeModal();
+    }
   };
 
   // ── Form submit ──────────────────────────────────────────
@@ -103,7 +116,9 @@ export default function Customers() {
       fetchCustomers();
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setFormError(detail || "Something went wrong. Please try again.");
+      setFormError(
+        typeof detail === "string" ? detail : "Something went wrong. Please try again."
+      );
     } finally {
       setSaving(false);
     }
@@ -125,18 +140,21 @@ export default function Customers() {
   // ── Render ───────────────────────────────────────────────
   return (
     <div className="customers-page">
-      {/* ── Header ── */}
+
+      {/* Header */}
       <div className="customers-header">
         <div>
           <h1 className="customers-title">Customers</h1>
-          <p className="customers-subtitle">{total} registered customer{total !== 1 ? "s" : ""}</p>
+          <p className="customers-subtitle">
+            {total} registered customer{total !== 1 ? "s" : ""}
+          </p>
         </div>
         <button className="btn-primary" onClick={openAdd}>
           + New Customer
         </button>
       </div>
 
-      {/* ── Search bar ── */}
+      {/* Search */}
       <div className="customers-toolbar">
         <div className="search-wrapper">
           <span className="search-icon">⌕</span>
@@ -153,10 +171,9 @@ export default function Customers() {
         </div>
       </div>
 
-      {/* ── Error banner ── */}
       {error && <div className="error-banner">{error}</div>}
 
-      {/* ── Table ── */}
+      {/* Table */}
       <div className="table-wrapper">
         <table className="customers-table">
           <thead>
@@ -178,7 +195,9 @@ export default function Customers() {
             ) : customers.length === 0 ? (
               <tr>
                 <td colSpan={7} className="table-state">
-                  {search ? "No customers match your search." : "No customers yet. Add your first one!"}
+                  {search
+                    ? "No customers match your search."
+                    : "No customers yet. Add your first one!"}
                 </td>
               </tr>
             ) : (
@@ -203,13 +222,67 @@ export default function Customers() {
 
       {/* ── Add / Edit Modal ── */}
       {modalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={handleOverlayClick}>
+          <div
+            className="modal"
+            style={{ maxWidth: "600px", position: "relative" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+
+            {/* ── Discard confirmation overlay ── */}
+            {confirmClose && (
+              <div style={{
+                position: "absolute", inset: 0,
+                background: "rgba(0,0,0,0.5)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                zIndex: 10, borderRadius: "16px",
+              }}>
+                <div style={{
+                  background: "#fff", borderRadius: "14px",
+                  padding: "28px 32px", maxWidth: "360px",
+                  textAlign: "center",
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                }}>
+                  <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
+                  <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
+                    Discard changes?
+                  </p>
+                  <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
+                    You have unsaved data. If you close now it will be lost.
+                  </p>
+                  <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                    <button
+                      onClick={() => setConfirmClose(false)}
+                      style={{
+                        padding: "10px 20px", borderRadius: "8px",
+                        border: "1.5px solid #e5e7eb", background: "#fff",
+                        color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                      }}
+                    >
+                      Keep editing
+                    </button>
+                    <button
+                      onClick={() => { setConfirmClose(false); closeModal(); }}
+                      style={{
+                        padding: "10px 20px", borderRadius: "8px",
+                        border: "none", background: "#dc2626",
+                        color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                      }}
+                    >
+                      Discard
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── Modal header ── */}
             <div className="modal-header">
               <h2>{editingCustomer ? "Edit Customer" : "New Customer"}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
 
+            {/* ── Form ── */}
             <form className="modal-form" onSubmit={handleSubmit}>
               <div className="form-row">
                 <div className="form-group">
@@ -263,7 +336,11 @@ export default function Customers() {
                 />
               </div>
 
-              {formError && <p className="form-error">{formError}</p>}
+              {formError && (
+                <p className="form-error">
+                  {typeof formError === "string" ? formError : "Validation error."}
+                </p>
+              )}
 
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={closeModal}>
@@ -287,7 +364,8 @@ export default function Customers() {
               <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
             </div>
             <p className="confirm-text">
-              Are you sure you want to delete <strong>{deleteTarget.name}</strong>?
+              Are you sure you want to delete{" "}
+              <strong>{deleteTarget.name}</strong>?
               This action cannot be undone.
             </p>
             <div className="modal-actions">
@@ -301,7 +379,7 @@ export default function Customers() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
-
