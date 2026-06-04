@@ -8,6 +8,8 @@ from models.entrances import Entrance
 from models.receipts import Receipt
 from models.tanks import Tank
 from schemas.entrances import EntranceCreate, EntranceUpdate, EntranceResponse, EntranceListResponse
+from auth import get_current_user, require_admin, require_manager_or_above
+from models.users import User
 
 router = APIRouter(prefix="/entrances", tags=["Entrances"])
 
@@ -33,6 +35,7 @@ def get_entrances(
     limit: int = 50,
     supplier_type: Optional[str] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     query = db.query(Entrance).options(
         joinedload(Entrance.receipts),
@@ -57,7 +60,7 @@ def get_entrance(entrance_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=EntranceResponse, status_code=201)
-def create_entrance(entrance_data: EntranceCreate, db: Session = Depends(get_db)):
+def create_entrance(entrance_data: EntranceCreate, db: Session = Depends(get_db), current_user: User = Depends(require_manager_or_above) ):
     if not entrance_data.receipt_ids:
         raise HTTPException(status_code=400, detail="At least one receipt is required")
 
@@ -194,7 +197,7 @@ def update_entrance(
     ).filter(Entrance.id == entrance_id).first()
 
 @router.delete("/{entrance_id}", status_code=204)
-def delete_entrance(entrance_id: int, db: Session = Depends(get_db)):
+def delete_entrance(entrance_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin) ):
     entrance = db.query(Entrance).filter(Entrance.id == entrance_id).first()
     if not entrance:
         raise HTTPException(status_code=404, detail="Entrance not found")

@@ -11,6 +11,9 @@ from schemas.suppliers import (
     SupplierListResponse,
 )
 
+from auth import get_current_user, require_admin, require_manager_or_above
+from models.users import User
+
 router = APIRouter(prefix="/suppliers", tags=["Suppliers"])
 
 
@@ -21,6 +24,7 @@ def get_suppliers(
     search: Optional[str] = None,
     supplier_type: Optional[SupplierType] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     query = db.query(Supplier)
     if search:
@@ -45,7 +49,7 @@ def get_supplier(supplier_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=SupplierResponse, status_code=201)
-def create_supplier(supplier_data: SupplierCreate, db: Session = Depends(get_db)):
+def create_supplier(supplier_data: SupplierCreate, db: Session = Depends(get_db), current_user: User = Depends(require_manager_or_above) ):
     if supplier_data.cif:
         existing = db.query(Supplier).filter(
             Supplier.cif == supplier_data.cif
@@ -76,7 +80,7 @@ def update_supplier(
 
 
 @router.delete("/{supplier_id}", status_code=204)
-def delete_supplier(supplier_id: int, db: Session = Depends(get_db)):
+def delete_supplier(supplier_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")

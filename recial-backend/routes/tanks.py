@@ -5,6 +5,9 @@ from database import get_db
 from models.tanks import Tank
 from models.entrances import Entrance
 from schemas.tanks import TankCreate, TankUpdate, TankResponse, TankListResponse
+from auth import get_current_user, require_admin, require_manager_or_above
+from models.users import User
+
 
 router = APIRouter(prefix="/tanks", tags=["Tanks"])
 
@@ -16,7 +19,7 @@ def get_tanks(db: Session = Depends(get_db)):
 
 
 @router.get("/{tank_id}", response_model=TankResponse)
-def get_tank(tank_id: int, db: Session = Depends(get_db)):
+def get_tank(tank_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     tank = db.query(Tank).filter(Tank.id == tank_id).first()
     if not tank:
         raise HTTPException(status_code=404, detail="Tank not found")
@@ -24,7 +27,7 @@ def get_tank(tank_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=TankResponse, status_code=201)
-def create_tank(tank_data: TankCreate, db: Session = Depends(get_db)):
+def create_tank(tank_data: TankCreate, db: Session = Depends(get_db), current_user: User = Depends(require_manager_or_above)):
     new_tank = Tank(**tank_data.model_dump())
     db.add(new_tank)
     db.commit()
@@ -45,7 +48,7 @@ def update_tank(tank_id: int, tank_data: TankUpdate, db: Session = Depends(get_d
 
 
 @router.delete("/{tank_id}", status_code=204)
-def delete_tank(tank_id: int, db: Session = Depends(get_db)):
+def delete_tank(tank_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     tank = db.query(Tank).filter(Tank.id == tank_id).first()
     if not tank:
         raise HTTPException(status_code=404, detail="Tank not found")

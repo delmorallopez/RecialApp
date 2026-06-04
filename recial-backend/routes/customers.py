@@ -6,10 +6,14 @@ from database import get_db
 from models.customers import Customer
 from schemas.customers import CustomerCreate, CustomerUpdate, CustomerResponse, CustomerListResponse
 
+from auth import get_current_user, require_admin, require_manager_or_above
+from models.users import User
+
+
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
 @router.get("/", response_model=CustomerListResponse)
-def get_customers(skip: int = 0, limit: int = 50, search: Optional[str] = None, db: Session = Depends(get_db)):
+def get_customers(skip: int = 0, limit: int = 50, search: Optional[str] = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     query = db.query(Customer)
     if search:
         query = query.filter(Customer.name.ilike(f"%{search}%") | Customer.email.ilike(f"%{search}%"))
@@ -25,7 +29,7 @@ def get_customer(customer_id: int, db: Session = Depends(get_db)):
     return customer
 
 @router.post("/", response_model=CustomerResponse, status_code=201)
-def create_customer(customer_data: CustomerCreate, db: Session = Depends(get_db)):
+def create_customer(customer_data: CustomerCreate, db: Session = Depends(get_db), current_user: User = Depends(require_manager_or_above) ):
     if customer_data.email:
         existing = db.query(Customer).filter(Customer.email == customer_data.email).first()
         if existing:
@@ -48,7 +52,7 @@ def update_customer(customer_id: int, customer_data: CustomerUpdate, db: Session
     return customer
 
 @router.delete("/{customer_id}", status_code=204)
-def delete_customer(customer_id: int, db: Session = Depends(get_db)):
+def delete_customer(customer_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin) ):
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")

@@ -340,15 +340,47 @@ export default function Entrances() {
     <div className="customers-page">
 
       {/* Header */}
-      <div className="customers-header">
-        <div>
-          <h1 className="customers-title">Entrances</h1>
-          <p className="customers-subtitle">
-            {total} batch{total !== 1 ? "es" : ""} — <strong>{totalKg.toFixed(1)} kg</strong> total UCO
-          </p>
-        </div>
-        <button className="btn-primary" onClick={openAdd}>+ New Entrance</button>
+  <div className="customers-header">
+  <div>
+    <h1 className="customers-title">Entrances</h1>
+    <p className="customers-subtitle">
+      {total} batch{total !== 1 ? "es" : ""} — <strong>{totalKg.toFixed(1)} kg</strong> total UCO
+    </p>
+
+    {/* Tank stock summary */}
+    {tanks.length > 0 && (
+      <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
+        {tanks.map((t) => {
+          const pct = t.capacity ? Math.round(((t.stock || 0) / t.capacity) * 100) : null;
+          const color = pct === null ? "#6b7280" : pct >= 90 ? "#dc2626" : pct >= 70 ? "#f59e0b" : "#2d7a4f";
+          return (
+            <div key={t.id} style={{
+              display: "flex", alignItems: "center", gap: "8px",
+              background: "#fff", border: "1.5px solid #e5e7eb",
+              borderRadius: "8px", padding: "6px 12px",
+              fontSize: "13px",
+            }}>
+              <span style={{ fontSize: "15px" }}>🛢️</span>
+              <span style={{ fontWeight: "600", color: "#374151" }}>{t.name}</span>
+              <span style={{ fontWeight: "700", color }}>
+                {(t.stock || 0).toLocaleString()} kg
+              </span>
+              {pct !== null && (
+                <>
+                  <div style={{ width: "60px", height: "6px", background: "#f3f4f6", borderRadius: "999px", overflow: "hidden" }}>
+                    <div style={{ width: `${Math.min(pct, 100)}%`, height: "100%", background: color, borderRadius: "999px" }} />
+                  </div>
+                  <span style={{ fontSize: "11px", color, fontWeight: "600" }}>{pct}%</span>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
+    )}
+  </div>
+  <button className="btn-primary" onClick={openAdd}>+ New Entrance</button>
+</div>
 
       {/* Type filter */}
       <div className="customers-toolbar" style={{ display: "flex", gap: "8px" }}>

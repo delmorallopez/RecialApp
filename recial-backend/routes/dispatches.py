@@ -12,6 +12,8 @@ from models.tanks import Tank
 from schemas.dispatches import (
     DispatchCreate, DispatchUpdate, DispatchResponse, DispatchListResponse
 )
+from auth import get_current_user, require_admin, require_manager_or_above
+from models.users import User
 
 router = APIRouter(prefix="/dispatches", tags=["Dispatches"])
 
@@ -43,6 +45,7 @@ def get_dispatches(
     limit: int = 50,
     customer_id: Optional[int] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     query = db.query(Dispatch).options(
         joinedload(Dispatch.customer),
@@ -66,7 +69,7 @@ def get_dispatch(dispatch_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=DispatchResponse, status_code=201)
-def create_dispatch(dispatch_data: DispatchCreate, db: Session = Depends(get_db)):
+def create_dispatch(dispatch_data: DispatchCreate, db: Session = Depends(get_db), current_user: User = Depends(require_manager_or_above) ):
     # Validate customer
     customer = db.query(Customer).filter(
         Customer.id == dispatch_data.customer_id
@@ -191,7 +194,7 @@ def update_dispatch(
 
 
 @router.delete("/{dispatch_id}", status_code=204)
-def delete_dispatch(dispatch_id: int, db: Session = Depends(get_db)):
+def delete_dispatch(dispatch_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
     dispatch = db.query(Dispatch).filter(Dispatch.id == dispatch_id).first()
     if not dispatch:
         raise HTTPException(status_code=404, detail="Dispatch not found")

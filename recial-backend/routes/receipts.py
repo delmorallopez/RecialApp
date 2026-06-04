@@ -14,6 +14,9 @@ from schemas.receipts import (
     ReceiptListResponse,
 )
 
+from auth import get_current_user, require_admin, require_manager_or_above
+from models.users import User
+
 router = APIRouter(prefix="/receipts", tags=["Receipts"])
 
 
@@ -35,6 +38,7 @@ def get_receipts(
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
     query = db.query(Receipt).options(
         joinedload(Receipt.supplier),
@@ -66,7 +70,7 @@ def get_receipt(receipt_id: int, db: Session = Depends(get_db)):
 
 # ── POST /receipts/ ──────────────────────────────────────────
 @router.post("/", response_model=ReceiptResponse, status_code=201)
-def create_receipt(receipt_data: ReceiptCreate, db: Session = Depends(get_db)):
+def create_receipt(receipt_data: ReceiptCreate, db: Session = Depends(get_db), current_user: User = Depends(require_manager_or_above)):
     # Validate supplier exists
     supplier = db.query(Supplier).filter(
         Supplier.id == receipt_data.supplier_id
@@ -150,7 +154,7 @@ def update_receipt(
 
 # ── DELETE /receipts/{id} ────────────────────────────────────
 @router.delete("/{receipt_id}", status_code=204)
-def delete_receipt(receipt_id: int, db: Session = Depends(get_db)):
+def delete_receipt(receipt_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_admin) ):
     receipt = db.query(Receipt).filter(Receipt.id == receipt_id).first()
     if not receipt:
         raise HTTPException(status_code=404, detail="Receipt not found")
