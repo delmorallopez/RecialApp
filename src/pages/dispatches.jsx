@@ -269,9 +269,24 @@ export default function Dispatches() {
                   <td className="td-actions">
                     <button className="btn-edit" onClick={() => setDetailDispatch(d)}>View</button>
                     <button className="btn-edit" onClick={() => openEdit(d)}>Edit</button>
+                    <button
+                      className="btn-edit"
+                      style={{ background: "#f0fdf4", color: "#15803d" }}
+                      onClick={() => {
+                        const price = prompt("Price per kg (€):", "1.09");
+                        if (price) {
+                          window.open(
+                            `http://localhost:8000/invoices/${d.id}?price_per_kg=${price}`,
+                            "_blank"
+                          );
+                        }
+                      }}
+                    >
+                      🧾 Invoice
+                    </button>
                     <button className="btn-delete" onClick={() => setDeleteTarget(d)}>Delete</button>
                   </td>
-                </tr>
+                 </tr>
               ))
             )}
           </tbody>
