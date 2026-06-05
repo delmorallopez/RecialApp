@@ -11,6 +11,7 @@ from database import get_db
 from models.entrances import Entrance
 from models.dispatches import Dispatch
 from models.disposals import Disposal
+from typing import Optional
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -200,3 +201,171 @@ def get_mass_balance(
             "Content-Disposition": f"attachment; filename=MassBalance_Recial_{year}.xlsx"
         },
     )
+
+
+@router.get("/receipts-summary")
+def get_receipts_summary(
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    supplier_type: Optional[str] = Query(None),  # "Horeca" or "Urban"
+    supplier_id: Optional[int] = Query(None),   
+    db: Session = Depends(get_db),
+):
+    from models.receipts import Receipt
+    from models.suppliers import Supplier
+    from sqlalchemy import func
+
+    query = db.query(Receipt).join(
+        Supplier, Receipt.supplier_id == Supplier.id
+    ).options(joinedload(Receipt.supplier))
+
+    if date_from:
+        query = query.filter(Receipt.date >= date_from)
+    if date_to:
+        query = query.filter(Receipt.date <= date_to)
+    if supplier_type:
+        query = query.filter(Supplier.supplier_type == supplier_type)
+    if supplier_id:                                                    # ← ADD THIS
+        query = query.filter(Receipt.supplier_id == supplier_id)
+
+
+    receipts = query.order_by(Receipt.date.desc()).all()
+
+    # ── Group by supplier ────────────────────────────────────
+    supplier_summary = {}
+    for r in receipts:
+        sid = r.supplier_id
+        if sid not in supplier_summary:
+            supplier_summary[sid] = {
+                "supplier_id":   sid,
+                "supplier_name": r.supplier.name if r.supplier else "—",
+                "supplier_type": r.supplier.supplier_type if r.supplier else "—",
+                "receipts_count": 0,
+                "total_kg":       0,
+                "first_date":     str(r.date),
+                "last_date":      str(r.date),
+            }
+        s = supplier_summary[sid]
+        s["receipts_count"] += 1
+        s["total_kg"]       += r.quantity_kg or 0
+        if str(r.date) < s["first_date"]: s["first_date"] = str(r.date)
+        if str(r.date) > s["last_date"]:  s["last_date"]  = str(r.date)
+
+    # ── Totals ───────────────────────────────────────────────
+    horeca_kg = sum(
+        r.quantity_kg or 0 for r in receipts
+        if r.supplier and r.supplier.supplier_type == "Horeca"
+    )
+    urban_kg = sum(
+        r.quantity_kg or 0 for r in receipts
+        if r.supplier and r.supplier.supplier_type == "Urban"
+    )
+
+    return {
+        "total_receipts": len(receipts),
+        "total_kg":       round(sum(r.quantity_kg or 0 for r in receipts), 1),
+        "horeca_kg":      round(horeca_kg, 1),
+        "urban_kg":       round(urban_kg, 1),
+        "date_from":      str(date_from) if date_from else None,
+        "date_to":        str(date_to) if date_to else None,
+        "suppliers":      sorted(
+            [{ **v, "total_kg": round(v["total_kg"], 1) } for v in supplier_summary.values()],
+            key=lambda x: x["total_kg"],
+            reverse=True,
+        ),
+    }
+
+
+
+@router.get("/tank-stock")
+def get_tank_stock(
+    year: int = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    from models.tanks import Tank
+    from models.entrances import Entrance
+    from models.dispatches import Dispatch
+    from models.disposals import Disposal
+    from sqlalchemy import func, extract
+
+    if not year:
+        year = datetime.now().year
+
+    tanks = db.query(Tank).filter(Tank.is_active == True).all()
+
+    result = []
+    for tank in tanks:
+        # Current stock
+        pct = round((tank.stock / tank.capacity) * 100, 1) if tank.capacity else 0
+
+        # Monthly history — entrances in
+        monthly_in = {}
+        entrances = db.query(
+            extract("month", Entrance.date).label("month"),
+            func.sum(Entrance.quantity_kg).label("total")
+        ).filter(
+            Entrance.tank_id == tank.id,
+            extract("year", Entrance.date) == year,
+        ).group_by("month").all()
+
+        for row in entrances:
+            monthly_in[int(row.month)] = float(row.total or 0)
+
+        # Monthly history — dispatches out
+        monthly_out = {}
+        dispatches = db.query(
+            extract("month", Dispatch.date).label("month"),
+            func.sum(Dispatch.quantity).label("total")
+        ).filter(
+            Dispatch.tank_id == tank.id,
+            extract("year", Dispatch.date) == year,
+        ).group_by("month").all()
+
+        for row in dispatches:
+            monthly_out[int(row.month)] = float(row.total or 0)
+
+        # Monthly disposal out
+        disposal_out = {}
+        disposals = db.query(
+            extract("month", Dispatch.date).label("month"),
+            func.sum(Disposal.quantity).label("total")
+        ).join(
+            Dispatch, Disposal.dispatch_id == Dispatch.id
+        ).filter(
+            Dispatch.tank_id == tank.id,
+            extract("year", Dispatch.date) == year,
+        ).group_by("month").all()
+
+        for row in disposals:
+            disposal_out[int(row.month)] = float(row.total or 0)
+
+        # Build monthly timeline
+        monthly = []
+        running = 0
+        for m in range(1, 13):
+            added    = monthly_in.get(m, 0)
+            removed  = monthly_out.get(m, 0) + disposal_out.get(m, 0)
+            running  = running + added - removed
+            fill_pct = round((running / tank.capacity) * 100, 1) if tank.capacity else None
+            monthly.append({
+                "month":    m,
+                "label":    ["Jan","Feb","Mar","Apr","May","Jun",
+                             "Jul","Aug","Sep","Oct","Nov","Dec"][m-1],
+                "added":    round(added, 1),
+                "removed":  round(removed, 1),
+                "stock":    round(max(running, 0), 1),
+                "fill_pct": fill_pct,
+            })
+
+        result.append({
+            "id":          tank.id,
+            "name":        tank.name,
+            "capacity":    tank.capacity or 0,
+            "current_stock": tank.stock or 0,
+            "current_pct": pct,
+            "monthly":     monthly,
+            "total_in":    round(sum(monthly_in.values()), 1),
+            "total_out":   round(sum(monthly_out.values()) + sum(disposal_out.values()), 1),
+        })
+
+    return {"year": year, "tanks": result}

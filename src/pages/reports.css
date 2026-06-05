@@ -1,0 +1,295 @@
+/* â”€â”€ Reports Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.reports-page {
+    padding: 40px 48px;
+    max-width: 1400px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+  }
+  
+  /* â”€â”€ Header â”€â”€ */
+  .reports-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 28px;
+  }
+  
+  .reports-year-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .reports-year-selector label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+  }
+  
+  .reports-year-selector select {
+    padding: 10px 16px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 9px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+    background: #fff;
+    cursor: pointer;
+    min-width: 100px;
+  }
+  
+  .reports-year-selector select:focus {
+    outline: none;
+    border-color: #2d7a4f;
+  }
+  
+  /* â”€â”€ Success banner â”€â”€ */
+  .reports-success-banner {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    color: #15803d;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 15px;
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .reports-success-banner button {
+    background: none;
+    border: none;
+    color: #15803d;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+  }
+  
+  /* â”€â”€ Layout â”€â”€ */
+  .reports-layout {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+  }
+  
+  /* â”€â”€ Left sidebar â”€â”€ */
+  .reports-sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: #fff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 24px;
+  }
+  
+  .reports-sidebar-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 10px 8px;
+  }
+  
+  .reports-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    text-align: left;
+    transition: background 0.15s, color 0.15s;
+    margin-bottom: 2px;
+  }
+  
+  .reports-sidebar-item:hover {
+    background: #f3f4f6;
+  }
+  
+  .reports-sidebar-item.active {
+    background: #f0fdf4;
+    color: #15803d;
+    font-weight: 700;
+  }
+  
+  .reports-sidebar-icon {
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  
+  .reports-sidebar-count {
+    margin-left: auto;
+    background: #e5e7eb;
+    color: #6b7280;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 999px;
+    min-width: 20px;
+    text-align: center;
+  }
+  
+  .reports-sidebar-item.active .reports-sidebar-count {
+    background: #dcfce7;
+    color: #15803d;
+  }
+  
+  /* â”€â”€ Right content â”€â”€ */
+  .reports-content {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .reports-section-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 20px;
+  }
+  
+  /* â”€â”€ Cards grid â”€â”€ */
+  .reports-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+  
+  /* â”€â”€ Report card â”€â”€ */
+  .report-card {
+    border: 1.5px solid;
+    border-radius: 14px;
+    padding: 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    transition: box-shadow 0.2s, transform 0.15s;
+  }
+  
+  .report-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+  }
+  
+  .report-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  
+  .report-card-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  
+  .report-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  
+  .report-card-format {
+    font-size: 12px;
+    color: #9ca3af;
+    font-weight: 500;
+  }
+  
+  .report-card-soon {
+    background: #f3f4f6;
+    color: #9ca3af;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .report-card-description {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0;
+    flex: 1;
+  }
+  
+  .report-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+  }
+  
+  .report-card-period {
+    font-size: 13px;
+    color: #9ca3af;
+  }
+  
+  .report-card-period strong {
+    color: #374151;
+  }
+  
+  .report-card-btn {
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    transition: opacity 0.2s, transform 0.15s;
+  }
+  
+  .report-card-btn:not(:disabled):hover {
+    opacity: 0.88;
+    transform: translateY(-1px);
+  }
+  
+  .report-card-btn:disabled {
+    color: #9ca3af;
+  }
+  
+  .report-btn-loading {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .report-btn-loading::before {
+    content: "";
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  
+  /* â”€â”€ Responsive â”€â”€ */
+  @media (max-width: 768px) {
+    .reports-page { padding: 20px 16px; }
+    .reports-layout { flex-direction: column; }
+    .reports-sidebar { width: 100%; position: static; }
+    .reports-header { flex-direction: column; gap: 12px; }
+  }
