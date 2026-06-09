@@ -137,49 +137,27 @@ function SideBar({ isActive }) {
           );
         })}
 
-        {/* Reports collapsible */}
-        <button
-          onClick={() => setReportsOpen(!reportsOpen)}
-          style={{
-            ...itemStyle(location.pathname.startsWith("/reports")),
-            border: "none",
-            borderLeft: location.pathname.startsWith("/reports") ? "3px solid rgba(255,255,255,0.9)" : "3px solid transparent",
-          }}
-          onMouseEnter={(e) => hoverIn(e, location.pathname.startsWith("/reports"))}
-          onMouseLeave={(e) => hoverOut(e, location.pathname.startsWith("/reports"))}
-        >
-          <span style={{ fontSize: "18px", width: "22px", textAlign: "center", flexShrink: 0 }}>📈</span>
-          <span style={{ flex: 1 }}>Reports</span>
-          <span style={{ fontSize: "11px", opacity: 0.7, transform: reportsOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", display: "inline-block" }}>▼</span>
-        </button>
-
-        {reportsOpen && (
-          <div style={{ marginLeft: "16px", paddingLeft: "18px", borderLeft: "1px solid rgba(255,255,255,0.2)", marginBottom: "4px" }}>
-            {REPORTS_ITEMS.map((item) => {
-              const active = isActivePath(item.path);
-              return (
-                <Link key={item.path} to={item.path} style={{
-                  display: "flex", alignItems: "center", gap: "8px",
-                  padding: "9px 10px", borderRadius: "7px", textDecoration: "none",
-                  marginBottom: "2px", fontSize: "14px",
-                  fontWeight: active ? "700" : "400",
-                  color: active ? "#fff" : "rgba(255,255,255,0.75)",
-                  background: active ? "rgba(255,255,255,0.14)" : "transparent",
-                  transition: "all 0.15s ease",
-                }}
-                  onMouseEnter={(e) => { if (!active) { e.currentTarget.style.background = "rgba(255,255,255,0.08)"; e.currentTarget.style.color = "#fff"; } }}
-                  onMouseLeave={(e) => { if (!active) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(255,255,255,0.75)"; } }}
-                >
-                  <span style={{ fontSize: "14px" }}>{item.icon}</span>
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-            <div style={{ padding: "4px 10px", fontSize: "11px", color: "rgba(255,255,255,0.25)", fontStyle: "italic" }}>
-              More coming soon
-            </div>
-          </div>
-        )}
+        {/* Reports — direct link */}
+        {(() => {
+          const active = isActivePath("/reports");
+          return (
+            <Link
+              to="/reports"
+              style={{
+                ...itemStyle(active),
+                borderLeft: active
+                  ? "3px solid rgba(255,255,255,0.9)"
+                  : "3px solid transparent",
+              }}
+              onMouseEnter={(e) => hoverIn(e, active)}
+              onMouseLeave={(e) => hoverOut(e, active)}
+            >
+              <span style={{ fontSize: "18px", width: "22px", textAlign: "center", flexShrink: 0 }}>📈</span>
+              <span style={{ flex: 1 }}>Reports</span>
+              {active && <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(255,255,255,0.9)", flexShrink: 0 }} />}
+            </Link>
+          );
+        })()}
 
         {/* Settings */}
         {(() => {

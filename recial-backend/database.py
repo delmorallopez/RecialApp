@@ -7,8 +7,11 @@ load_dotenv()  # ← loads .env file
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:mIqMsRln0vMVgr5eb2kIT4CMzT0DK6VgmKzUmu3CCc6zyhD3dnpaovou0ySGn8JT@qb4gtumxixm10m4kws17yoh9:5432/postgres"
+#    "postgresql://postgres:mIqMsRln0vMVgr5eb2kIT4CMzT0DK6VgmKzUmu3CCc6zyhD3dnpaovou0ySGn8JT@qb4gtumxixm10m4kws17yoh9:5432/postgres"
+      "postgresql://jesus.delmoral@localhost:5432/recial_db"
 )
+
+
 
 print(">>> Connecting to:", DATABASE_URL[:50], "...")  # debug
 
