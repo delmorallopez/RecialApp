@@ -1,13 +1,14 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine, Base
 from routes import customers, suppliers, receipts, entrances, tanks, dispatches, reports, pickupPoints, dashboard, auth, invoices
 from models.customers import Customer
-from models.suppliers import Supplier  # ← this line must exist
+from models.suppliers import Supplier
 
-import os
-print("DATABASE_URL =", os.getenv("DATABASE_URL", "NOT SET"))
+# ── Debug — remove after confirming DB connects ──────────
+print(">>> DATABASE_URL =", os.getenv("DATABASE_URL", "NOT SET"))
 
 # Create all tables on startup
 Base.metadata.create_all(bind=engine)
@@ -18,31 +19,21 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# -----------------------------------------------
-# CORS — allow React frontend to talk to this API
-# -----------------------------------------------
+# ── CORS ─────────────────────────────────────────────────
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React dev server
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ------------------------------------------------
-#  CORS allow credentials:
-#--------------------------------------------------
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# -----------------------------------------------
-# Include routers
-# -----------------------------------------------
+# ── Routers ───────────────────────────────────────────────
 app.include_router(customers.router)
 app.include_router(suppliers.router)
 app.include_router(receipts.router)
@@ -55,9 +46,7 @@ app.include_router(dashboard.router)
 app.include_router(auth.router)
 app.include_router(invoices.router)
 
-# -----------------------------------------------
-# Health check
-# -----------------------------------------------
+# ── Health check ──────────────────────────────────────────
 @app.get("/", tags=["Health"])
 def root():
     return {"status": "ok", "message": "Recial API is running"}
