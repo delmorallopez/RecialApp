@@ -1,70 +1,259 @@
-# Getting Started with Create React App
+# 🫙 Recial UCO Traceability System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A full-stack web application for tracking **Used Cooking Oil (UCO)** collection, processing and dispatch at **Reciclajes Recial S.L.** — a waste oil recycling company based in Luque, Córdoba, Spain.
 
-## Available Scripts
+Built to replace manual spreadsheet tracking with a proper traceability system that meets **ISCC certification** requirements.
 
-In the project directory, you can run:
+🌐 **Live App:** [https://mzpqhv96qjkzktfr4qxl9im5.hosting.codeyourfuture.io](https://mzpqhv96qjkzktfr4qxl9im5.hosting.codeyourfuture.io)
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## 📸 Screenshots
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+> Dashboard · Suppliers · Reports · Quarterly Closing
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## 🏗️ Architecture
 
-### `npm run build`
+```
+┌─────────────────┐        ┌─────────────────┐        ┌─────────────────┐
+│   React Frontend │ ──────▶│  FastAPI Backend │ ──────▶│   PostgreSQL DB  │
+│   (nginx/Docker) │  HTTP  │  (uvicorn/Docker)│  ORM   │   (Coolify)      │
+└─────────────────┘        └─────────────────┘        └─────────────────┘
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+**Frontend:** React · Recharts · Axios · React Router  
+**Backend:** FastAPI · SQLAlchemy · JWT Auth · reportlab · openpyxl  
+**Database:** PostgreSQL  
+**Deployment:** Docker · nginx · Coolify  
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## ✨ Features
 
-### `npm run eject`
+### 🔐 Authentication & Roles
+- JWT-based authentication with 8-hour token expiry
+- Three role levels with different permissions:
+  - **Admin** — full access, user management
+  - **Manager** — create and edit, no delete
+  - **Driver** — create receipts only
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+### 📦 Core Traceability Modules
+| Module | Description |
+|--------|-------------|
+| **Suppliers** | Manage Horeca (type A) and Urban (type B) suppliers with pickup point coordinates |
+| **Receipts** | Log UCO collections per supplier, with per-pickup-point quantities |
+| **Entrances** | Batch receipts into tank entrance records (batch ID: `DDMMYYA/B`) |
+| **Tanks** | Track tank stock levels with automatic updates on entrance/dispatch |
+| **Dispatches** | Record outgoing sales with disposal records and batch IDs (`SADDMMYY`) |
+| **Customers** | Manage buyers with address and CIF details |
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 📊 Reports (7 reports across 4 sections)
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+**Traceability**
+- Mass Balance Excel (PG.09.01/REG-A ISCC format)
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+**Operations**
+- Receipts Summary — filter by supplier, type, date range
+- Tank Stock Report — monthly history reconstructed from entrances/dispatches
+- Urban Collection PDF — RESUMEN RECOGIDA URBANO per municipality, per pickup point
 
-## Learn More
+**Commercial**
+- Dispatches Summary — with monthly bar chart
+- Customer Activity — revenue, avg order size, activity status, monthly trend
+- Supplier Activity — collection performance, activity status, monthly trend
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+**Audit**
+- Quarterly Closing (CIERRES TRIMESTRALES) — view + Excel download
+- Annual Summary — monthly breakdown with charts
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+### 🧾 Invoice Generation
+- PDF invoice generation per dispatch
+- Matches official Recial invoice format (GDPR footer, IVA 21%, payment terms)
+- Downloadable directly from the dispatches table
 
-### Code Splitting
+### 🗺️ Logistics Map
+- Interactive 3D map of Urban supplier pickup points
+- Coordinates stored per pickup point with Google Maps integration
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+---
 
-### Analyzing the Bundle Size
+## 🚀 Getting Started
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+### Prerequisites
+- Python 3.12+
+- Node.js 18+
+- PostgreSQL 14+
 
-### Making a Progressive Web App
+### Backend Setup
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```bash
+cd recial-backend
 
-### Advanced Configuration
+# Create virtual environment
+python3.12 -m venv venv
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+# Install dependencies
+./venv/bin/pip install -r requirements.txt
 
-### Deployment
+# Set up environment variable
+export DATABASE_URL=postgresql://user:password@localhost:5432/recial_db
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+# Create database
+createdb recial_db
 
-### `npm run build` fails to minify
+# Start server
+./venv/bin/uvicorn main:app --reload
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+API docs available at: `http://localhost:8000/docs`
+
+### Frontend Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Set API URL (optional, defaults to localhost:8000)
+export REACT_APP_API_URL=http://localhost:8000
+
+# Start development server
+npm start
+```
+
+App runs at: `http://localhost:3000`
+
+---
+
+## 🗂️ Project Structure
+
+```
+RecialApp/
+├── src/                        # React frontend
+│   ├── pages/
+│   │   ├── dashboard.jsx       # KPIs, charts, activity feed
+│   │   ├── suppliers.jsx       # Supplier CRUD + pickup points
+│   │   ├── receipts.jsx        # UCO collection records
+│   │   ├── entrances.jsx       # Tank entrance batches
+│   │   ├── dispatches.jsx      # Outgoing sales + invoices
+│   │   ├── tanks.jsx           # Tank stock management
+│   │   ├── reports.jsx         # All 7 reports
+│   │   └── settings.jsx        # User management
+│   ├── components/
+│   │   └── SideBar.jsx         # Navigation with role badges
+│   ├── services/               # Axios API calls
+│   └── context/
+│       └── AuthContext.js      # JWT auth state
+│
+├── recial-backend/             # FastAPI backend
+│   ├── main.py                 # App entry point + CORS
+│   ├── database.py             # SQLAlchemy engine
+│   ├── auth.py                 # JWT helpers + role guards
+│   ├── models/                 # SQLAlchemy ORM models
+│   │   ├── supplier.py
+│   │   ├── receipt.py
+│   │   ├── entrance.py
+│   │   ├── dispatch.py
+│   │   ├── disposal.py
+│   │   ├── tank.py
+│   │   ├── pickup_point.py
+│   │   ├── receipt_pickup.py
+│   │   ├── invoice.py
+│   │   └── user.py
+│   ├── routes/                 # API endpoints
+│   │   ├── suppliers.py
+│   │   ├── receipts.py
+│   │   ├── entrances.py
+│   │   ├── dispatches.py
+│   │   ├── tanks.py
+│   │   ├── reports.py          # All report endpoints + PDF/Excel generators
+│   │   ├── invoices.py         # Invoice PDF generation
+│   │   ├── dashboard.py
+│   │   ├── auth.py
+│   │   └── pickup_points.py
+│   └── schemas/                # Pydantic validation schemas
+│
+├── Dockerfile                  # Multi-stage React build
+├── nginx.conf                  # Production nginx config
+└── .dockerignore
+```
+
+---
+
+## 🔌 API Overview
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/auth/login` | Get JWT token |
+| `GET` | `/auth/me` | Current user info |
+| `GET` | `/suppliers/` | List suppliers |
+| `GET` | `/receipts/` | List receipts |
+| `GET` | `/entrances/` | List entrances |
+| `GET` | `/dispatches/` | List dispatches |
+| `GET` | `/tanks/` | List tanks with stock |
+| `GET` | `/dashboard/` | KPIs and activity data |
+| `GET` | `/reports/mass-balance` | ISCC Mass Balance Excel |
+| `GET` | `/reports/quarterly-closing` | CIERRES TRIMESTRALES |
+| `GET` | `/reports/quarterly-closing/excel` | Download Excel |
+| `GET` | `/reports/urban-collection/{id}/pdf` | Municipality PDF |
+| `GET` | `/invoices/{dispatch_id}` | Generate invoice PDF |
+
+Full interactive docs at `/docs` (Swagger UI).
+
+---
+
+## 🐳 Docker Deployment
+
+```bash
+# Build and run frontend
+docker build -t recial-frontend .
+docker run -p 80:80 -e REACT_APP_API_URL=https://your-api-url recial-frontend
+```
+
+The `Dockerfile` uses a **multi-stage build**:
+1. **Build stage** — Node 18 Alpine, runs `npm run build`
+2. **Serve stage** — nginx Alpine, serves the `build/` folder
+
+---
+
+## 🌍 Environment Variables
+
+| Variable | Where | Description |
+|----------|-------|-------------|
+| `DATABASE_URL` | Backend | PostgreSQL connection string |
+| `ALLOWED_ORIGINS` | Backend | Comma-separated CORS origins |
+| `REACT_APP_API_URL` | Frontend (build time) | Backend API base URL |
+
+---
+
+## 📄 Business Context
+
+Recial collects UCO from two supplier types:
+- **Horeca (Type A)** — restaurants and food service businesses
+- **Urban (Type B)** — street container pickup points managed per municipality
+
+The oil flows through the system:
+
+```
+Suppliers → Receipts → Entrances (into tanks) → Dispatches (to customers)
+                                                      ↓
+                                                  Disposal record
+                                                  (mermas / losses)
+```
+
+Each entrance and dispatch generates a **batch ID** used for ISCC traceability certification. The system generates all regulatory documents required by Spanish and EU waste oil regulations.
+
+---
+
+## 👤 Author
+
+**Jesus del Moral Lopez**  
+Software Developer · Code Your Future Graduate  
+[delmorallopez@gmail.com](mailto:delmorallopez@gmail.com) · [GitHub](https://github.com/delmorallopez) · [LinkedIn](https://linkedin.com/in/delmorallopez)
+
+---
+
+## 📜 License
+
+This project was built for Reciclajes Recial S.L. — all business logic, report formats and data structures are proprietary to the company.
