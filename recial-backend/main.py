@@ -6,6 +6,9 @@ from routes import customers, suppliers, receipts, entrances, tanks, dispatches,
 from models.customers import Customer
 from models.suppliers import Supplier  # ← this line must exist
 
+import os
+print("DATABASE_URL =", os.getenv("DATABASE_URL", "NOT SET"))
+
 # Create all tables on startup
 Base.metadata.create_all(bind=engine)
 

@@ -2,12 +2,11 @@
 // Base Axios instance — all API calls go through here
 
 import axios from "axios";
+import config from "../config";
+
 
 const API = axios.create({
-  baseURL: "http://localhost:8000",
-  headers: {
-    "Content-Type": "application/json",
-  },
+  baseURL: config.apiUrl,
 });
 
 export default API;

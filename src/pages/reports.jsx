@@ -7,6 +7,7 @@ import {
 import "../stylecss/customers.css";
 import "./reports.css";
 import API from "../services/api";
+import config from "../config";
 
 // ── Report definitions ───────────────────────────────────────
 const REPORT_SECTIONS = [
@@ -143,8 +144,7 @@ export default function Reports() {
     setError(null);
     setSuccess(null);
     try {
-      const res = await fetch(
-        `http://localhost:8000/reports/mass-balance?year=${yearFilter}`,
+      const res = await fetch(`${config.apiUrl}/reports/mass-balance?year=${yearFilter}`,
         { method: "GET", headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       if (!res.ok) throw new Error(`Server error: ${res.status}`);
