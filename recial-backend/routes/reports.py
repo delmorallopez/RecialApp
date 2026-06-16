@@ -860,15 +860,27 @@ def _generate_urban_pdf(data: dict) -> bytes:
     y -= 6 * mm
     c.drawString(LEFT, y, period_label.upper())
 
-    logo_x = RIGHT - 45 * mm
-    logo_y = TOP - 12 * mm
-    c.setFillColor(GREEN_DARK)
-    c.roundRect(logo_x, logo_y, 42 * mm, 14 * mm, 3 * mm, fill=1, stroke=0)
-    c.setFont("Helvetica-Bold", 18)
-    c.setFillColor(WHITE)
-    c.drawCentredString(logo_x + 21 * mm, logo_y + 4 * mm, "recial")
-    c.setFont("Helvetica", 7)
-    c.drawCentredString(logo_x + 21 * mm, logo_y + 1.5 * mm, "gestión de residuos")
+# ── Header right — Recial logo ────────────────────────────
+    import os as _os
+    _ASSETS   = _os.path.join(_os.path.dirname(__file__), "../assets")
+    _LOGO     = _os.path.join(_ASSETS, "LogoRecial.png")
+    logo_w = 45 * mm
+    logo_h = 18 * mm
+    logo_x = RIGHT - logo_w
+    logo_y = TOP - logo_h + 6 * mm
+    if _os.path.exists(_LOGO):
+        c.drawImage(_LOGO, logo_x, logo_y,
+                    width=logo_w, height=logo_h,
+                    preserveAspectRatio=True, mask='auto')
+    else:
+        # Fallback green box if logo file missing
+        c.setFillColor(GREEN_DARK)
+        c.roundRect(logo_x, logo_y, logo_w, logo_h, 3*mm, fill=1, stroke=0)
+        c.setFont("Helvetica-Bold", 18)
+        c.setFillColor(WHITE)
+        c.drawCentredString(logo_x + logo_w/2, logo_y + 5*mm, "recial")
+        c.setFont("Helvetica", 7)
+        c.drawCentredString(logo_x + logo_w/2, logo_y + 2*mm, "gestión de residuos")
 
     usable_w = RIGHT - LEFT
     fecha_w  = 26 * mm
@@ -897,37 +909,59 @@ def _generate_urban_pdf(data: dict) -> bytes:
     tot_idx = 2 + n_data
 
     tbl = Table(table_data, colWidths=col_widths)
+    GREEN_DARK  = colors.HexColor("#1e3d2a")   # dark green — main headers
+    GREEN_MID   = colors.HexColor("#2d7a4f")   # mid green — pickup point names
+    GREEN_LIGHT = colors.HexColor("#8dc63f")   # lime green — totals row
+    GRAY_ROW    = colors.HexColor("#f2f2f2")   # alternating row bg
+    WHITE       = colors.white
+    DARK        = colors.HexColor("#1a1a1a")
+
     tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0,0),  (0,0),      GREEN_DARK),
-        ("BACKGROUND", (1,0),  (n_pp,0),   GREEN_LIGHT),
-        ("BACKGROUND", (-1,0), (-1,0),     GREEN_DARK),
-        ("TEXTCOLOR",  (0,0),  (-1,0),     WHITE),
-        ("FONTNAME",   (0,0),  (-1,0),     "Helvetica-Bold"),
-        ("FONTSIZE",   (0,0),  (-1,0),     10),
-        ("ALIGN",      (0,0),  (-1,0),     "CENTER"),
-        ("VALIGN",     (0,0),  (-1,0),     "MIDDLE"),
-        ("SPAN",       (1,0),  (n_pp,0)),
-        ("BACKGROUND", (0,1),  (0,1),      GRAY_HDR),
-        ("BACKGROUND", (1,1),  (n_pp,1),   GREEN_LIGHT),
-        ("BACKGROUND", (-1,1), (-1,1),     GRAY_HDR),
-        ("TEXTCOLOR",  (1,1),  (n_pp,1),   WHITE),
-        ("FONTNAME",   (0,1),  (-1,1),     "Helvetica-Bold"),
-        ("FONTSIZE",   (0,1),  (-1,1),     8),
-        ("ALIGN",      (0,1),  (-1,1),     "CENTER"),
-        ("VALIGN",     (0,1),  (-1,1),     "MIDDLE"),
-        ("FONTNAME",   (0,2),  (-1,tot_idx-1), "Helvetica-Bold"),
-        ("FONTSIZE",   (0,2),  (-1,tot_idx-1), 10),
-        ("ALIGN",      (0,2),  (-1,tot_idx-1), "CENTER"),
-        ("VALIGN",     (0,2),  (-1,tot_idx-1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (0,2), (-1,tot_idx-1), [WHITE, GRAY_HDR]),
-        ("BACKGROUND", (0,tot_idx), (-1,tot_idx), GREEN_LIGHT),
-        ("TEXTCOLOR",  (0,tot_idx), (-1,tot_idx), WHITE),
-        ("FONTNAME",   (0,tot_idx), (-1,tot_idx), "Helvetica-Bold"),
-        ("FONTSIZE",   (0,tot_idx), (-1,tot_idx), 11),
-        ("ALIGN",      (0,tot_idx), (-1,tot_idx), "CENTER"),
-        ("VALIGN",     (0,tot_idx), (-1,tot_idx), "MIDDLE"),
-        ("GRID",       (0,0), (-1,-1), 0.5, colors.HexColor("#cccccc")),
-        ("ROWHEIGHT",  (0,0), (-1,-1), 9 * mm),
+        # ── Header row 1: FECHA | CONTENEDORES | TOTAL ────────
+        ("BACKGROUND",    (0,0),  (0,0),     GREEN_DARK),   # FECHA
+        ("BACKGROUND",    (1,0),  (n_pp,0),  GREEN_DARK),   # CONTENEDORES
+        ("BACKGROUND",    (-1,0), (-1,0),    GREEN_DARK),   # TOTAL
+        ("TEXTCOLOR",     (0,0),  (-1,0),    WHITE),
+        ("FONTNAME",      (0,0),  (-1,0),    "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0),  (-1,0),    10),
+        ("ALIGN",         (0,0),  (-1,0),    "CENTER"),
+        ("VALIGN",        (0,0),  (-1,0),    "MIDDLE"),
+        ("SPAN",          (1,0),  (n_pp,0)),
+
+        # ── Header row 2: pickup point names ──────────────────
+        ("BACKGROUND",    (0,1),  (0,1),     GREEN_DARK),   # empty FECHA cell
+        ("BACKGROUND",    (1,1),  (n_pp,1),  GREEN_DARK),    # pickup names — mid green
+        ("BACKGROUND",    (-1,1), (-1,1),    GREEN_DARK),   # empty TOTAL cell
+        ("TEXTCOLOR",     (0,1),  (0,1),     WHITE),
+        ("TEXTCOLOR",     (1,1),  (n_pp,1),  WHITE),
+        ("TEXTCOLOR",     (-1,1), (-1,1),    WHITE),
+        ("FONTNAME",      (0,1),  (-1,1),    "Helvetica-Bold"),
+        ("FONTSIZE",      (0,1),  (-1,1),    9),
+        ("ALIGN",         (0,1),  (-1,1),    "CENTER"),
+        ("VALIGN",        (0,1),  (-1,1),    "MIDDLE"),
+
+        # ── Data rows — alternating white / light gray ─────────
+        ("FONTNAME",      (0,2),  (-1,tot_idx-1), "Helvetica-Bold"),
+        ("FONTSIZE",      (0,2),  (-1,tot_idx-1), 10),
+        ("ALIGN",         (0,2),  (-1,tot_idx-1), "CENTER"),
+        ("VALIGN",        (0,2),  (-1,tot_idx-1), "MIDDLE"),
+        ("TEXTCOLOR",     (0,2),  (-1,tot_idx-1), DARK),
+        ("ROWBACKGROUNDS",(0,2),  (-1,tot_idx-1), [WHITE, GRAY_ROW]),
+
+        # ── Totals row — lime green ────────────────────────────
+        ("BACKGROUND",    (0,tot_idx), (-1,tot_idx), GREEN_LIGHT),
+        ("TEXTCOLOR",     (0,tot_idx), (-1,tot_idx), WHITE),
+        ("FONTNAME",      (0,tot_idx), (-1,tot_idx), "Helvetica-Bold"),
+        ("FONTSIZE",      (0,tot_idx), (-1,tot_idx), 11),
+        ("ALIGN",         (0,tot_idx), (-1,tot_idx), "CENTER"),
+        ("VALIGN",        (0,tot_idx), (-1,tot_idx), "MIDDLE"),
+
+        # ── Grid ───────────────────────────────────────────────
+        ("GRID",          (0,0),  (-1,-1),   0.5, colors.HexColor("#cccccc")),
+        ("ROWHEIGHT",     (0,0),  (-1,-1),   9 * mm),
+
+        # ── Left-align FECHA column ────────────────────────────
+        ("ALIGN",         (0,2),  (0,tot_idx), "CENTER"),
     ]))
 
     tbl_w, tbl_h = tbl.wrapOn(c, RIGHT - LEFT, h)
