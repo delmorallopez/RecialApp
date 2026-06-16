@@ -8,6 +8,8 @@ import {
 import { getCustomers } from "../services/customersServices";
 import { getEntrances } from "../services/entrancesServices";
 import { getTanks } from "../services/tanksServices";
+import API from "../services/api";
+import config from "../config";
 import "../stylecss/customers.css";
 
 const EMPTY_FORM = {
@@ -25,6 +27,15 @@ const EMPTY_FORM = {
   disposal_notes: "",
 };
 
+const EMPTY_INVOICE_FORM = {
+  invoice_number: "",
+  price_per_kg: "1.09",
+  quantity_kg: "",
+  invoice_date: "",
+  iva_pct: "21",
+  notes: "",
+};
+
 export default function Dispatches() {
   const [dispatches, setDispatches] = useState([]);
   const [total, setTotal] = useState(0);
@@ -35,7 +46,7 @@ export default function Dispatches() {
   const [entrances, setEntrances] = useState([]);
   const [tanks, setTanks] = useState([]);
 
-  // Create/Edit modal (shared)
+  // Create/Edit modal
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDispatch, setEditingDispatch] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -47,16 +58,16 @@ export default function Dispatches() {
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [confirmClose, setConfirmClose] = useState(false);
 
-  const handleOverlayClick = () => {
-    const isDirty = form.customer_id || form.quantity ||
-                    form.entrance_ids.length > 0 ||
-                    form.disposal_quantity || form.notes ||
-                    form.tank_id || form.post_number;
-    if (isDirty) setConfirmClose(true);
-    else closeModal();
-  };
+  // ── Invoice modal ────────────────────────────────────────
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceDispatch, setInvoiceDispatch] = useState(null);
+  const [invoiceData, setInvoiceData] = useState(null);   // existing invoice or null
+  const [invoiceForm, setInvoiceForm] = useState(EMPTY_INVOICE_FORM);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceSaving, setInvoiceSaving] = useState(false);
+  const [invoiceError, setInvoiceError] = useState(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   // ── Fetch dispatches ─────────────────────────────────────
   const fetchDispatches = useCallback(async () => {
@@ -91,14 +102,13 @@ export default function Dispatches() {
     }
   };
 
-  // ── Modal helpers ────────────────────────────────────────
+  // ── Dispatch modal helpers ───────────────────────────────
   const openAdd = () => {
     setEditingDispatch(null);
     setForm(EMPTY_FORM);
     setFormError(null);
     setModalOpen(true);
     loadDropdownData();
-    setConfirmClose(false);
   };
 
   const openEdit = (dispatch) => {
@@ -122,7 +132,6 @@ export default function Dispatches() {
     setFormError(null);
     setModalOpen(true);
     loadDropdownData();
-    setConfirmClose(false);
   };
 
   const closeModal = () => {
@@ -130,7 +139,6 @@ export default function Dispatches() {
     setEditingDispatch(null);
     setForm(EMPTY_FORM);
     setFormError(null);
-    setConfirmClose(false); 
   };
 
   const toggleEntrance = (id) => {
@@ -142,7 +150,7 @@ export default function Dispatches() {
     }));
   };
 
-  // ── Submit ───────────────────────────────────────────────
+  // ── Submit dispatch ──────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.customer_id) { setFormError("Please select a customer."); return; }
@@ -200,6 +208,147 @@ export default function Dispatches() {
       setDeleteTarget(null);
     }
   };
+
+  // ── Invoice helpers ──────────────────────────────────────
+  const openInvoice = async (dispatch) => {
+    setInvoiceDispatch(dispatch);
+    setInvoiceError(null);
+    setInvoiceData(null);
+    setInvoiceOpen(true);
+    setInvoiceLoading(true);
+
+    try {
+      // Check if invoice already exists
+      const res = await API.get(`/invoices/dispatch/${dispatch.id}`);
+      if (res.data) {
+        // Existing invoice — populate form with saved values
+        setInvoiceData(res.data);
+        setInvoiceForm({
+          invoice_number: res.data.invoice_number || dispatch.batch_id || "",
+          price_per_kg:   String(res.data.price_per_kg || "1.09"),
+          quantity_kg:    res.data.quantity_kg ? String(res.data.quantity_kg) : "",
+          invoice_date:   res.data.invoice_date || dispatch.date?.split("T")[0] || "",
+          iva_pct:        String(res.data.iva_pct || "21"),
+          notes:          res.data.notes || "",
+        });
+      } else {
+        // New invoice — set defaults from dispatch
+        setInvoiceForm({
+          invoice_number: dispatch.batch_id || "",
+          price_per_kg:   "1.09",
+          quantity_kg:    "",
+          invoice_date:   dispatch.date?.split("T")[0] || new Date().toISOString().split("T")[0],
+          iva_pct:        "21",
+          notes:          "",
+        });
+      }
+    } catch {
+      setInvoiceForm({
+        invoice_number: dispatch.batch_id || "",
+        price_per_kg:   "1.09",
+        quantity_kg:    "",
+        invoice_date:   dispatch.date?.split("T")[0] || "",
+        iva_pct:        "21",
+        notes:          "",
+      });
+    } finally {
+      setInvoiceLoading(false);
+    }
+  };
+
+  const closeInvoice = () => {
+    setInvoiceOpen(false);
+    setInvoiceDispatch(null);
+    setInvoiceData(null);
+    setInvoiceForm(EMPTY_INVOICE_FORM);
+    setInvoiceError(null);
+  };
+
+  // Save / update invoice
+  const saveInvoice = async () => {
+    if (!invoiceForm.price_per_kg || parseFloat(invoiceForm.price_per_kg) <= 0) {
+      setInvoiceError("Price per kg must be greater than 0."); return;
+    }
+    setInvoiceSaving(true);
+    setInvoiceError(null);
+    try {
+      if (invoiceData) {
+        // Update existing
+        await API.patch(`/invoices/${invoiceData.id}`, {
+          price_per_kg:   parseFloat(invoiceForm.price_per_kg),
+          quantity_kg:    invoiceForm.quantity_kg ? parseFloat(invoiceForm.quantity_kg) : null,
+          invoice_date:   invoiceForm.invoice_date || null,
+          invoice_number: invoiceForm.invoice_number || null,
+          iva_pct:        parseFloat(invoiceForm.iva_pct || 21),
+          notes:          invoiceForm.notes || null,
+        });
+        // Refresh invoice data
+        const res = await API.get(`/invoices/dispatch/${invoiceDispatch.id}`);
+        setInvoiceData(res.data);
+      } else {
+        // Create new
+        const res = await API.post(
+          `/invoices/dispatch/${invoiceDispatch.id}?price_per_kg=${invoiceForm.price_per_kg}`
+        );
+        setInvoiceData(res.data);
+        // Apply any other fields
+        if (invoiceForm.quantity_kg || invoiceForm.invoice_date || invoiceForm.invoice_number || invoiceForm.notes) {
+          await API.patch(`/invoices/${res.data.id}`, {
+            price_per_kg:   parseFloat(invoiceForm.price_per_kg),
+            quantity_kg:    invoiceForm.quantity_kg ? parseFloat(invoiceForm.quantity_kg) : null,
+            invoice_date:   invoiceForm.invoice_date || null,
+            invoice_number: invoiceForm.invoice_number || null,
+            iva_pct:        parseFloat(invoiceForm.iva_pct || 21),
+            notes:          invoiceForm.notes || null,
+          });
+          const res2 = await API.get(`/invoices/dispatch/${invoiceDispatch.id}`);
+          setInvoiceData(res2.data);
+        }
+      }
+    } catch (err) {
+      setInvoiceError(err.response?.data?.detail || "Could not save invoice.");
+    } finally {
+      setInvoiceSaving(false);
+    }
+  };
+
+  // Download PDF
+  const downloadInvoicePdf = async () => {
+    setDownloadingPdf(true);
+    try {
+      // Save first if unsaved changes
+      if (!invoiceData) {
+        await saveInvoice();
+      }
+      const url = `${config.apiUrl}/invoices/dispatch/${invoiceDispatch.id}/pdf?price_per_kg=${invoiceForm.price_per_kg}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href = window.URL.createObjectURL(blob);
+      link.download = `Factura_${invoiceDispatch.batch_id}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(link.href);
+    } catch {
+      setInvoiceError("Could not download PDF.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
+  // Live preview totals
+  const previewQty   = parseFloat(invoiceForm.quantity_kg) || invoiceDispatch?.quantity || 0;
+  const previewPrice = parseFloat(invoiceForm.price_per_kg) || 0;
+  const previewIva   = parseFloat(invoiceForm.iva_pct) || 21;
+  const previewBase  = Math.round(previewQty * previewPrice * 100) / 100;
+  const previewIvaAmt= Math.round(previewBase * (previewIva / 100) * 100) / 100;
+  const previewTotal = Math.round((previewBase + previewIvaAmt) * 100) / 100;
+
+  const fmtEur = (v) => v?.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 
   // ── Helpers ──────────────────────────────────────────────
   const formatDate = (d) => {
@@ -272,21 +421,13 @@ export default function Dispatches() {
                     <button
                       className="btn-edit"
                       style={{ background: "#f0fdf4", color: "#15803d" }}
-                      onClick={() => {
-                        const price = prompt("Price per kg (€):", "1.09");
-                        if (price) {
-                          window.open(
-                            `http://localhost:8000/invoices/${d.id}?price_per_kg=${price}`,
-                            "_blank"
-                          );
-                        }
-                      }}
+                      onClick={() => openInvoice(d)}
                     >
                       🧾 Invoice
                     </button>
                     <button className="btn-delete" onClick={() => setDeleteTarget(d)}>Delete</button>
                   </td>
-                 </tr>
+                </tr>
               ))
             )}
           </tbody>
@@ -309,59 +450,206 @@ export default function Dispatches() {
         </table>
       </div>
 
-      {/* ── Create / Edit Modal (shared) ── */}
-      {modalOpen && (
-        <div className="modal-overlay" onClick={handleOverlayClick}>
-          <div className="modal" style={{ maxWidth: "680px", maxHeight: "90vh", overflowY: "auto", position: "relative" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-           
-           {confirmClose && (
-            <div style={{
-              position: "absolute", inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              zIndex: 10, borderRadius: "16px",
-            }}>
-              <div style={{
-                background: "#fff", borderRadius: "14px",
-                padding: "28px 32px", maxWidth: "360px",
-                textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-              }}>
-                <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
-                <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
-                  Discard changes?
+      {/* ══════════════════════════════════════════════════════
+          INVOICE MODAL
+      ══════════════════════════════════════════════════════ */}
+      {invoiceOpen && invoiceDispatch && (
+        <div className="modal-overlay" onClick={closeInvoice}>
+          <div className="modal" style={{ maxWidth: "620px", maxHeight: "92vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
+              <div>
+                <h2>🧾 Invoice — {invoiceDispatch.batch_id}</h2>
+                <p style={{ fontSize: "13px", color: "#6b7280", margin: "2px 0 0" }}>
+                  {invoiceData ? "Edit existing invoice" : "Create new invoice"} · {invoiceDispatch.customer?.name}
                 </p>
-                <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
-                  You have unsaved data. If you close now it will be lost.
-                </p>
-                <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
-                  <button
-                    onClick={() => setConfirmClose(false)}
-                    style={{
-                      padding: "10px 20px", borderRadius: "8px",
-                      border: "1.5px solid #e5e7eb", background: "#fff",
-                      color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
-                    }}
-                  >
-                    Keep editing
-                  </button>
-                  <button
-                    onClick={() => { setConfirmClose(false); closeModal(); }}
-                    style={{
-                      padding: "10px 20px", borderRadius: "8px",
-                      border: "none", background: "#dc2626",
-                      color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
-                    }}
-                  >
-                    Discard
-                  </button>
-                </div>
+              </div>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <button
+                  onClick={downloadInvoicePdf}
+                  disabled={downloadingPdf}
+                  style={{
+                    padding: "8px 16px", background: "#2d7a4f", color: "#fff",
+                    border: "none", borderRadius: "8px", fontSize: "13px",
+                    fontWeight: "700", cursor: "pointer",
+                    display: "flex", alignItems: "center", gap: "6px",
+                    opacity: downloadingPdf ? 0.7 : 1,
+                  }}
+                >
+                  {downloadingPdf ? (
+                    <><span style={{ width:"12px",height:"12px",border:"2px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite" }}/> Generating...</>
+                  ) : "⬇ Download PDF"}
+                </button>
+                <button className="modal-close" onClick={closeInvoice}>✕</button>
               </div>
             </div>
-          )}
 
-            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
+            <div style={{ padding: "16px 24px 24px" }}>
+
+              {invoiceLoading ? (
+                <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>Loading...</p>
+              ) : (
+                <>
+                  {/* Status badge */}
+                  {invoiceData && (
+                    <div style={{
+                      background: "#f0fdf4", border: "1.5px solid #86efac",
+                      borderRadius: "8px", padding: "10px 14px",
+                      marginBottom: "20px",
+                      display: "flex", alignItems: "center", gap: "8px",
+                      fontSize: "13px", color: "#15803d",
+                    }}>
+                      <span>✓</span>
+                      <span>Invoice saved — last updated. Any changes will update the existing invoice.</span>
+                    </div>
+                  )}
+
+                  {/* Dispatch info summary */}
+                  <div style={{
+                    display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "10px",
+                    marginBottom: "20px",
+                  }}>
+                    {[
+                      ["Dispatch Date", formatDate(invoiceDispatch.date)],
+                      ["Quantity", `${invoiceDispatch.quantity?.toLocaleString()} kg`],
+                      ["Customer", invoiceDispatch.customer?.name || "—"],
+                    ].map(([label, value]) => (
+                      <div key={label} style={{ background: "#f8fafc", borderRadius: "8px", padding: "10px 12px", border: "1.5px solid #e5e7eb" }}>
+                        <p style={{ fontSize: "11px", color: "#9ca3af", fontWeight: "600", textTransform: "uppercase", margin: "0 0 4px" }}>{label}</p>
+                        <p style={{ fontSize: "14px", fontWeight: "700", color: "#1a1a2e", margin: 0 }}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Invoice form */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+
+                    {/* Invoice number + date */}
+                    <div className="form-row">
+                      <div className="form-group form-group--grow">
+                        <label>Invoice Number</label>
+                        <input type="text"
+                          placeholder={invoiceDispatch.batch_id}
+                          value={invoiceForm.invoice_number}
+                          onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_number: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Invoice Date</label>
+                        <input type="date"
+                          value={invoiceForm.invoice_date}
+                          onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_date: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Price + quantity override */}
+                    <div className="form-row">
+                      <div className="form-group form-group--grow">
+                        <label>Price per kg (€) <span className="required">*</span></label>
+                        <input type="number" step="0.01" min="0.01"
+                          placeholder="1.09"
+                          value={invoiceForm.price_per_kg}
+                          onChange={(e) => setInvoiceForm({ ...invoiceForm, price_per_kg: e.target.value })}
+                        />
+                        <p style={{ fontSize: "11px", color: "#9ca3af", margin: "4px 0 0" }}>
+                          Default: 1.09 €/kg
+                        </p>
+                      </div>
+                      <div className="form-group form-group--grow">
+                        <label>Quantity override (kg)</label>
+                        <input type="number" step="0.1" min="0"
+                          placeholder={`${invoiceDispatch.quantity} kg (from dispatch)`}
+                          value={invoiceForm.quantity_kg}
+                          onChange={(e) => setInvoiceForm({ ...invoiceForm, quantity_kg: e.target.value })}
+                        />
+                        <p style={{ fontSize: "11px", color: "#9ca3af", margin: "4px 0 0" }}>
+                          Leave empty to use dispatch quantity
+                        </p>
+                      </div>
+                      <div className="form-group">
+                        <label>IVA (%)</label>
+                        <input type="number" step="0.1" min="0"
+                          value={invoiceForm.iva_pct}
+                          onChange={(e) => setInvoiceForm({ ...invoiceForm, iva_pct: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div className="form-group">
+                      <label>Notes (optional)</label>
+                      <input type="text"
+                        placeholder="Any additional notes..."
+                        value={invoiceForm.notes}
+                        onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
+                      />
+                    </div>
+
+                    {/* Live preview */}
+                    <div style={{
+                      background: "#f0fdf4", border: "1.5px solid #86efac",
+                      borderRadius: "12px", padding: "16px 20px",
+                    }}>
+                      <p style={{ fontWeight: "700", fontSize: "13px", color: "#15803d", margin: "0 0 12px" }}>
+                        💶 Invoice Preview
+                      </p>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "12px" }}>
+                        {[
+                          ["Base Imponible", fmtEur(previewBase), "#1a1a2e"],
+                          [`IVA ${invoiceForm.iva_pct}%`, fmtEur(previewIvaAmt), "#6b7280"],
+                          ["TOTAL FACTURA", fmtEur(previewTotal), "#2d7a4f"],
+                        ].map(([label, value, color]) => (
+                          <div key={label} style={{ textAlign: "center" }}>
+                            <p style={{ fontSize: "11px", color: "#9ca3af", fontWeight: "600", textTransform: "uppercase", margin: "0 0 4px" }}>{label}</p>
+                            <p style={{ fontSize: label === "TOTAL FACTURA" ? "20px" : "16px", fontWeight: "800", color, margin: 0 }}>{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #86efac", fontSize: "12px", color: "#6b7280" }}>
+                        {previewQty.toLocaleString()} kg × {invoiceForm.price_per_kg} €/kg
+                        {invoiceForm.quantity_kg && (
+                          <span style={{ color: "#f59e0b", marginLeft: "8px" }}>
+                            ⚠ Using overridden quantity
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {invoiceError && (
+                      <p className="form-error">{invoiceError}</p>
+                    )}
+
+                    {/* Actions */}
+                    <div className="modal-actions">
+                      <button type="button" className="btn-secondary" onClick={closeInvoice}>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={saveInvoice}
+                        disabled={invoiceSaving}
+                      >
+                        {invoiceSaving ? "Saving..." : invoiceData ? "Update Invoice" : "Create Invoice"}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Create / Edit Dispatch Modal ── */}
+      {modalOpen && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal" style={{ maxWidth: "680px", maxHeight: "90vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
               <div>
                 <h2>{editingDispatch ? `Edit ${editingDispatch.batch_id}` : "New Dispatch"}</h2>
                 {editingDispatch && (
@@ -375,7 +663,6 @@ export default function Dispatches() {
 
             <form className="modal-form" onSubmit={handleSubmit}>
 
-              {/* Customer + Date */}
               <div className="form-row">
                 <div className="form-group form-group--grow">
                   <label>Customer <span className="required">*</span></label>
@@ -393,7 +680,6 @@ export default function Dispatches() {
                 </div>
               </div>
 
-              {/* Tank + Post Number */}
               <div className="form-row">
                 <div className="form-group form-group--grow">
                   <label>Tank</label>
@@ -415,7 +701,6 @@ export default function Dispatches() {
                 </div>
               </div>
 
-              {/* Quantity + Raw material + GEI */}
               <div className="form-row">
                 <div className="form-group form-group--grow">
                   <label>Quantity (kg) <span className="required">*</span></label>
@@ -436,7 +721,6 @@ export default function Dispatches() {
                 </div>
               </div>
 
-              {/* Entrance batches */}
               <div className="form-group">
                 <label>
                   Entrance Batches (optional)
@@ -484,7 +768,6 @@ export default function Dispatches() {
                 )}
               </div>
 
-              {/* Disposal */}
               <div style={{
                 background: form.has_disposal ? "#fffbeb" : "#f8fafc",
                 border: `1.5px solid ${form.has_disposal ? "#fcd34d" : "#e5e7eb"}`,
@@ -506,7 +789,6 @@ export default function Dispatches() {
                     ))}
                   </div>
                 </div>
-
                 {form.has_disposal && (
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div className="form-row">
@@ -645,6 +927,8 @@ export default function Dispatches() {
           </div>
         </div>
       )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
