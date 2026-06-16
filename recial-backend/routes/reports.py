@@ -999,3 +999,391 @@ def download_urban_collection_pdf(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename={filename}"}
     )
+
+@router.get("/suppliers-list/pdf")
+def get_suppliers_list_pdf(
+    supplier_type: Optional[str] = Query(None),  # "Horeca" or "Urban"
+    supplier_id:   Optional[int] = Query(None),  # specific supplier
+    db: Session = Depends(get_db),
+):
+    from models.suppliers import Supplier
+    from sqlalchemy.orm import joinedload
+
+    query = db.query(Supplier).options(joinedload(Supplier.pickup_points))
+    if supplier_type: query = query.filter(Supplier.supplier_type == supplier_type)
+    if supplier_id:   query = query.filter(Supplier.id == supplier_id)
+    suppliers = query.order_by(Supplier.supplier_type, Supplier.name).all()
+
+    data = []
+    for s in suppliers:
+        pps = [{"name": pp.name, "latitude": pp.latitude, "longitude": pp.longitude, "notes": getattr(pp, "notes", "")}
+               for pp in (s.pickup_points or [])]
+        data.append({
+                "name":          s.name,
+                "supplier_type": s.supplier_type,
+                "cif":           getattr(s, "cif", None),
+                "address":       getattr(s, "address", None),
+                "email":         getattr(s, "email", None),
+                "phone":         getattr(s, "phone", None),
+                "pickup_points": pps,
+            })
+
+    pdf = _generate_suppliers_pdf(data)
+    return StreamingResponse(BytesIO(pdf), media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=Recial_Suppliers.pdf"})
+
+
+@router.get("/suppliers-list")
+def get_suppliers_list(
+    supplier_type: Optional[str] = Query(None),
+    supplier_id:   Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+):
+    from models.suppliers import Supplier
+    from sqlalchemy.orm import joinedload
+
+    query = db.query(Supplier).options(joinedload(Supplier.pickup_points))
+    if supplier_type: query = query.filter(Supplier.supplier_type == supplier_type)
+    if supplier_id:   query = query.filter(Supplier.id == supplier_id)
+    suppliers = query.order_by(Supplier.supplier_type, Supplier.name).all()
+
+    result = []
+    for s in suppliers:
+        pps = [{"id": pp.id, "name": pp.name, "latitude": pp.latitude, "longitude": pp.longitude}
+               for pp in (s.pickup_points or [])]
+        result.append({
+                "id":            s.id,
+                "name":          s.name,
+                "supplier_type": s.supplier_type,
+                "cif":           getattr(s, "cif", None),
+                "address":       getattr(s, "address", None),
+                "email":         getattr(s, "email", None),
+                "phone":         getattr(s, "phone", None),
+                "pickup_points": pps,
+            })
+
+    horeca = [r for r in result if r["supplier_type"] == "Horeca"]
+    urban  = [r for r in result if r["supplier_type"] == "Urban"]
+    return {"total": len(result), "horeca_count": len(horeca),
+            "urban_count": len(urban), "suppliers": result}
+
+
+
+# ════════════════════════════════════════════════════════════
+# CUSTOMERS LIST
+# ════════════════════════════════════════════════════════════
+
+def _generate_customers_pdf(customers: list) -> bytes:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle
+    from datetime import date as date_type
+    import os
+
+    buf = BytesIO()
+    w, h = A4
+    c = canvas.Canvas(buf, pagesize=A4)
+    LEFT  = 15 * mm
+    RIGHT = w - 15 * mm
+
+    GREEN_DARK = colors.HexColor("#1e3d2a")
+    GREEN      = colors.HexColor("#2d7a4f")
+    LGRAY      = colors.HexColor("#f2f2f2")
+    DARK       = colors.HexColor("#1a1a2e")
+    GRAY       = colors.HexColor("#6b7280")
+    WHITE      = colors.white
+
+    _ASSETS = os.path.join(os.path.dirname(__file__), "../assets")
+    _LOGO   = os.path.join(_ASSETS, "LogoRecial.png")
+
+    TOP = h - 15 * mm
+
+    # ── Logo ─────────────────────────────────────────────────
+    if os.path.exists(_LOGO):
+        c.drawImage(_LOGO, RIGHT - 40*mm, TOP - 16*mm,
+                    width=40*mm, height=16*mm,
+                    preserveAspectRatio=True, mask='auto')
+
+    # ── Title ─────────────────────────────────────────────────
+    c.setFont("Helvetica-Bold", 16)
+    c.setFillColor(GREEN_DARK)
+    c.drawString(LEFT, TOP - 8*mm, "CUSTOMER LIST")
+
+    c.setFont("Helvetica", 9)
+    c.setFillColor(GRAY)
+    c.drawString(LEFT, TOP - 14*mm,
+        f"Generated: {date_type.today().strftime('%d/%m/%Y')}  ·  {len(customers)} customers")
+
+    c.setStrokeColor(GREEN)
+    c.setLineWidth(2)
+    c.line(LEFT, TOP - 18*mm, RIGHT, TOP - 18*mm)
+
+    table_y = TOP - 24*mm
+
+    # ── Table ─────────────────────────────────────────────────
+    headers = ["#", "Name", "CIF", "Address", "Email", "Phone"]
+    data    = [headers]
+
+    for i, cu in enumerate(customers, 1):
+        data.append([
+            str(i),
+            cu.get("name") or "—",
+            cu.get("cif")  or "—",
+            cu.get("address") or "—",
+            cu.get("email") or "—",
+            cu.get("phone") or "—",
+        ])
+
+    col_widths = [10*mm, 45*mm, 28*mm, 52*mm, 38*mm, 22*mm]
+    tbl = Table(data, colWidths=col_widths, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,0),  GREEN_DARK),
+        ("TEXTCOLOR",     (0,0), (-1,0),  WHITE),
+        ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0), (-1,0),  9),
+        ("ALIGN",         (0,0), (-1,0),  "CENTER"),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+        ("FONTNAME",      (0,1), (-1,-1), "Helvetica"),
+        ("FONTSIZE",      (0,1), (-1,-1), 8),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGRAY]),
+        ("TEXTCOLOR",     (0,1), (-1,-1), DARK),
+        ("ALIGN",         (0,0), (0,-1),  "CENTER"),
+        ("ALIGN",         (1,1), (-1,-1), "LEFT"),
+        ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#d1d5db")),
+        ("ROWHEIGHT",     (0,0), (-1,-1), 8*mm),
+        ("TOPPADDING",    (0,0), (-1,-1), 2),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+    ]))
+
+    tbl_w, tbl_h = tbl.wrapOn(c, RIGHT - LEFT, h)
+    tbl.drawOn(c, LEFT, table_y - tbl_h)
+
+    # ── Footer ────────────────────────────────────────────────
+    c.setFont("Helvetica", 8)
+    c.setFillColor(GRAY)
+    c.drawCentredString(w / 2, 10*mm,
+        "RECICLAJES RECIAL S.L.  ·  C/ Carrera 56, 14880 Luque (Córdoba)  ·  info@recial.es")
+
+    c.save()
+    buf.seek(0)
+    return buf.read()
+
+
+def _generate_suppliers_pdf(suppliers: list) -> bytes:
+    from reportlab.lib.pagesizes import A4, landscape
+    from reportlab.lib.units import mm
+    from reportlab.pdfgen import canvas
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle
+    from datetime import date as date_type
+    import os
+
+    buf = BytesIO()
+    w, h = landscape(A4)
+    c = canvas.Canvas(buf, pagesize=landscape(A4))
+    LEFT  = 15 * mm
+    RIGHT = w - 15 * mm
+
+    GREEN_DARK  = colors.HexColor("#1e3d2a")
+    GREEN       = colors.HexColor("#2d7a4f")
+    GREEN_LIGHT = colors.HexColor("#8dc63f")
+    LGRAY       = colors.HexColor("#f2f2f2")
+    DARK        = colors.HexColor("#1a1a2e")
+    GRAY        = colors.HexColor("#6b7280")
+    WHITE       = colors.white
+    BLUE        = colors.HexColor("#1d4ed8")
+
+    _ASSETS = os.path.join(os.path.dirname(__file__), "../assets")
+    _LOGO   = os.path.join(_ASSETS, "LogoRecial.png")
+
+    TOP = h - 15 * mm
+
+    horeca = [s for s in suppliers if s.get("supplier_type") == "Horeca"]
+    urban  = [s for s in suppliers if s.get("supplier_type") == "Urban"]
+
+    # ── Logo ─────────────────────────────────────────────────
+    if os.path.exists(_LOGO):
+        c.drawImage(_LOGO, RIGHT - 40*mm, TOP - 16*mm,
+                    width=40*mm, height=16*mm,
+                    preserveAspectRatio=True, mask='auto')
+
+    # ── Title ─────────────────────────────────────────────────
+    c.setFont("Helvetica-Bold", 16)
+    c.setFillColor(GREEN_DARK)
+    c.drawString(LEFT, TOP - 8*mm, "SUPPLIER LIST")
+
+    c.setFont("Helvetica", 9)
+    c.setFillColor(GRAY)
+    c.drawString(LEFT, TOP - 14*mm,
+        f"Generated: {date_type.today().strftime('%d/%m/%Y')}  ·  "
+        f"{len(suppliers)} suppliers  ·  {len(horeca)} Horeca  ·  {len(urban)} Urban")
+
+    c.setStrokeColor(GREEN)
+    c.setLineWidth(2)
+    c.line(LEFT, TOP - 18*mm, RIGHT, TOP - 18*mm)
+
+    table_y = TOP - 24*mm
+
+    # ── Main suppliers table ──────────────────────────────────
+    headers = ["#", "Name", "Type", "CIF", "Address", "Email", "Phone", "Pickup Pts"]
+    data    = [headers]
+
+    for i, s in enumerate(suppliers, 1):
+        pp_count = len(s.get("pickup_points", []))
+        data.append([
+            str(i),
+            s.get("name") or "—",
+            s.get("supplier_type") or "—",
+            s.get("cif") or "—",
+            s.get("address") or "—",
+            s.get("email") or "—",
+            s.get("phone") or "—",
+            str(pp_count) if pp_count > 0 else "—",
+        ])
+
+    col_widths = [10*mm, 55*mm, 22*mm, 28*mm, 65*mm, 48*mm, 25*mm, 18*mm]
+    tbl = Table(data, colWidths=col_widths, repeatRows=1)
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND",    (0,0), (-1,0),  GREEN_DARK),
+        ("TEXTCOLOR",     (0,0), (-1,0),  WHITE),
+        ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",      (0,0), (-1,0),  9),
+        ("ALIGN",         (0,0), (-1,0),  "CENTER"),
+        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+        ("FONTNAME",      (0,1), (-1,-1), "Helvetica"),
+        ("FONTSIZE",      (0,1), (-1,-1), 8),
+        ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGRAY]),
+        ("TEXTCOLOR",     (0,1), (-1,-1), DARK),
+        ("ALIGN",         (0,0), (0,-1),  "CENTER"),
+        ("ALIGN",         (2,0), (2,-1),  "CENTER"),
+        ("ALIGN",         (7,0), (7,-1),  "CENTER"),
+        ("ALIGN",         (1,1), (1,-1),  "LEFT"),
+        ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#d1d5db")),
+        ("ROWHEIGHT",     (0,0), (-1,-1), 8*mm),
+        ("TOPPADDING",    (0,0), (-1,-1), 2),
+        ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+        ("LEFTPADDING",   (0,0), (-1,-1), 4),
+    ]))
+
+    # Colour Type column per row
+    for i, s in enumerate(suppliers, 1):
+        is_horeca = s.get("supplier_type") == "Horeca"
+        bg = colors.HexColor("#eff6ff") if is_horeca else colors.HexColor("#f0fdf4")
+        fc = BLUE if is_horeca else GREEN
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND", (2,i), (2,i), bg),
+            ("TEXTCOLOR",  (2,i), (2,i), fc),
+            ("FONTNAME",   (2,i), (2,i), "Helvetica-Bold"),
+        ]))
+
+    tbl_w, tbl_h = tbl.wrapOn(c, RIGHT - LEFT, h)
+    tbl.drawOn(c, LEFT, table_y - tbl_h)
+
+    # ── Urban pickup points section ───────────────────────────
+    pickup_y = table_y - tbl_h - 14*mm
+    urban_with_points = [s for s in urban if s.get("pickup_points")]
+
+    if urban_with_points:
+        c.setFont("Helvetica-Bold", 12)
+        c.setFillColor(GREEN_DARK)
+        c.drawString(LEFT, pickup_y, "URBAN SUPPLIERS — PICKUP POINTS WITH COORDINATES")
+
+        c.setStrokeColor(GREEN_LIGHT)
+        c.setLineWidth(1.5)
+        c.line(LEFT, pickup_y - 3*mm, RIGHT, pickup_y - 3*mm)
+        pickup_y -= 10*mm
+
+        for s in urban_with_points:
+            pps = s.get("pickup_points", [])
+
+            # Supplier sub-header
+            c.setFont("Helvetica-Bold", 10)
+            c.setFillColor(GREEN)
+            c.drawString(LEFT, pickup_y, f"  {s['name']}")
+            pickup_y -= 6*mm
+
+            pp_headers = ["Pickup Point Name", "Latitude", "Longitude", "Notes"]
+            pp_data    = [pp_headers]
+            for pp in pps:
+                lat = f"{pp['latitude']:.6f}"  if pp.get("latitude")  else "—"
+                lng = f"{pp['longitude']:.6f}" if pp.get("longitude") else "—"
+                pp_data.append([
+                    pp.get("name") or "—",
+                    lat,
+                    lng,
+                    pp.get("notes") or "",
+                ])
+
+            pp_col_widths = [80*mm, 38*mm, 38*mm, 115*mm]
+            pp_tbl = Table(pp_data, colWidths=pp_col_widths)
+            pp_tbl.setStyle(TableStyle([
+                ("BACKGROUND",    (0,0), (-1,0),  GREEN_LIGHT),
+                ("TEXTCOLOR",     (0,0), (-1,0),  WHITE),
+                ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
+                ("FONTSIZE",      (0,0), (-1,0),  8),
+                ("ALIGN",         (0,0), (-1,0),  "CENTER"),
+                ("FONTNAME",      (0,1), (-1,-1), "Helvetica"),
+                ("FONTSIZE",      (0,1), (-1,-1), 8),
+                ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGRAY]),
+                ("TEXTCOLOR",     (0,1), (-1,-1), DARK),
+                ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+                ("ALIGN",         (1,1), (2,-1),  "CENTER"),
+                ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#d1d5db")),
+                ("ROWHEIGHT",     (0,0), (-1,-1), 7*mm),
+                ("LEFTPADDING",   (0,0), (-1,-1), 4),
+                ("TOPPADDING",    (0,0), (-1,-1), 2),
+                ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+            ]))
+
+            pp_tbl_w, pp_tbl_h = pp_tbl.wrapOn(c, RIGHT - LEFT, h)
+            pp_tbl.drawOn(c, LEFT, pickup_y - pp_tbl_h)
+            pickup_y -= pp_tbl_h + 8*mm
+
+    # ── Footer ────────────────────────────────────────────────
+    c.setFont("Helvetica", 8)
+    c.setFillColor(GRAY)
+    c.drawCentredString(w / 2, 8*mm,
+        "RECICLAJES RECIAL S.L.  ·  C/ Carrera 56, 14880 Luque (Córdoba)  ·  info@recial.es")
+
+    c.save()
+    buf.seek(0)
+    return buf.read()
+
+
+@router.get("/customers-list")
+def get_customers_list(db: Session = Depends(get_db)):
+    from models.customers import Customer
+    customers = db.query(Customer).order_by(Customer.name).all()
+    return {
+        "total": len(customers),
+        "customers": [{
+            "id":      c.id,
+            "name":    c.name,
+            "cif":     getattr(c, "cif", None),
+            "address": getattr(c, "address", None),
+            "email":   getattr(c, "email", None),
+            "phone":   getattr(c, "phone", None),
+        } for c in customers]
+    }
+
+
+@router.get("/customers-list/pdf")
+def get_customers_list_pdf(db: Session = Depends(get_db)):
+    from models.customers import Customer
+    customers = db.query(Customer).order_by(Customer.name).all()
+    data = [{
+        "name":    c.name,
+        "cif":     getattr(c, "cif", None),
+        "address": getattr(c, "address", None),
+        "email":   getattr(c, "email", None),
+        "phone":   getattr(c, "phone", None),
+    } for c in customers]
+    pdf = _generate_customers_pdf(data)
+    return StreamingResponse(
+        BytesIO(pdf),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "attachment; filename=Recial_Customers.pdf"}
+    )

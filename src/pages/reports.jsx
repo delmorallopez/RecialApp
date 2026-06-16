@@ -7,6 +7,7 @@ import {
 import "../stylecss/customers.css";
 import "./reports.css";
 import API from "../services/api";
+import config from "../config";
 
 const REPORT_SECTIONS = [
   {
@@ -31,6 +32,8 @@ const REPORT_SECTIONS = [
       { id: "dispatches_summary", title: "Dispatches Summary",  description: "Summary of all dispatches by customer, date and quantity. Includes disposal records.",                                 format: "View in modal",  icon: "🚚", color: "#b45309", bgColor: "#fffbeb", borderColor: "#fcd34d" },
       { id: "customer_activity",  title: "Customer Activity",   description: "Sales activity per customer — total kg, revenue, order size, activity status and monthly trend.",                      format: "View in modal",  icon: "👥", color: "#0f766e", bgColor: "#f0fdfa", borderColor: "#99f6e4" },
       { id: "supplier_activity",  title: "Supplier Activity",   description: "Collection activity per supplier — total kg received, receipt count, activity status and monthly trend.",              format: "View in modal",  icon: "🏭", color: "#6d28d9", bgColor: "#faf5ff", borderColor: "#ddd6fe" },
+      { id: "customers_list",     title: "Customers List",      description: "Full list of all customers with contact details. Preview in modal and download as PDF.",                               format: "View + PDF",     icon: "📋", color: "#0369a1", bgColor: "#f0f9ff", borderColor: "#7dd3fc" },
+      { id: "suppliers_list",     title: "Suppliers List",      description: "Full list of all suppliers with type, contact details and Urban pickup points with GPS coordinates.",                  format: "View + PDF",     icon: "📋", color: "#059669", bgColor: "#f0fdf4", borderColor: "#6ee7b7" },
     ],
   },
   {
@@ -103,6 +106,21 @@ export default function Reports() {
   const [annualError,   setAnnualError]   = useState(null);
   const [annualYear,    setAnnualYear]    = useState(new Date().getFullYear());
 
+  // ── Customers list ────────────────────────────────────────
+  const [custListOpen,    setCustListOpen]    = useState(false);
+  const [custListLoading, setCustListLoading] = useState(false);
+  const [custListData,    setCustListData]    = useState(null);
+  const [custListError,   setCustListError]   = useState(null);
+  const [dlCustList,      setDlCustList]      = useState(false);
+
+  // ── Suppliers list ────────────────────────────────────────
+  const [suppListOpen,    setSuppListOpen]    = useState(false);
+  const [suppListLoading, setSuppListLoading] = useState(false);
+  const [suppListData,    setSuppListData]    = useState(null);
+  const [suppListError,   setSuppListError]   = useState(null);
+  const [dlSuppList,      setDlSuppList]      = useState(false);
+  const [suppListFilters, setSuppListFilters] = useState({ supplier_type: "", supplier_id: "" });
+
   // ── Urban collection ──────────────────────────────────────
   const [urbanOpen,        setUrbanOpen]        = useState(false);
   const [urbanLoading,     setUrbanLoading]     = useState(false);
@@ -136,6 +154,8 @@ export default function Reports() {
     if (reportId === "supplier_activity")  { setSupplierActOpen(true); fetchSupplierActivity(); return; }
     if (reportId === "quarterly_closing")  { setQuarterOpen(true);     fetchQuarterly(quarterYear); return; }
     if (reportId === "annual_summary")     { setAnnualOpen(true);      fetchAnnual(annualYear); return; }
+    if (reportId === "customers_list")     { setCustListOpen(true); fetchCustList(); return; }
+    if (reportId === "suppliers_list")     { setSuppListOpen(true); fetchSuppList(); return; }
     if (reportId === "urban_collection")   { setUrbanOpen(true); return; }
 
     setGenerating(reportId); setError(null); setSuccess(null);
@@ -204,6 +224,52 @@ export default function Reports() {
     finally { setAnnualLoading(false); }
   };
 
+  const fetchCustList = async () => {
+    setCustListLoading(true); setCustListError(null);
+    try { const res = await API.get("/reports/customers-list"); setCustListData(res.data); }
+    catch { setCustListError("Could not load customers."); }
+    finally { setCustListLoading(false); }
+  };
+
+  const fetchSuppList = async (f = suppListFilters) => {
+    setSuppListLoading(true); setSuppListError(null);
+    try {
+      const p = new URLSearchParams();
+      if (f.supplier_type) p.append("supplier_type", f.supplier_type);
+      if (f.supplier_id)   p.append("supplier_id",   f.supplier_id);
+      const res = await API.get(`/reports/suppliers-list?${p}`);
+      setSuppListData(res.data);
+    } catch { setSuppListError("Could not load suppliers."); }
+    finally { setSuppListLoading(false); }
+  };
+
+  const downloadCustListPdf = async () => {
+    setDlCustList(true);
+    try {
+      const res = await fetch(`${config.apiUrl}/reports/customers-list/pdf`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      const blob = await res.blob();
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = "Recial_Customers.pdf"; document.body.appendChild(a); a.click(); a.remove();
+    } catch { setCustListError("Could not download PDF."); }
+    finally { setDlCustList(false); }
+  };
+
+  const downloadSuppListPdf = async () => {
+    setDlSuppList(true);
+    try {
+      const p = new URLSearchParams();
+      if (suppListFilters.supplier_type) p.append("supplier_type", suppListFilters.supplier_type);
+      if (suppListFilters.supplier_id)   p.append("supplier_id",   suppListFilters.supplier_id);
+      const res = await fetch(`${config.apiUrl}/reports/suppliers-list/pdf?${p}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      const blob = await res.blob();
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = "Recial_Suppliers.pdf"; document.body.appendChild(a); a.click(); a.remove();
+    } catch { setSuppListError("Could not download PDF."); }
+    finally { setDlSuppList(false); }
+  };
+
   const fetchUrbanCollection = async (f = urbanFilters) => {
     if (!f.supplier_id) return;
     setUrbanLoading(true); setUrbanError(null);
@@ -270,7 +336,7 @@ export default function Reports() {
   const selectedTankData = tankData?.tanks?.find((t) => t.id === selectedTank);
 
   const btnLabel = (id) => {
-    const modal = ["receipts_summary","tank_stock","dispatches_summary","customer_activity","supplier_activity","quarterly_closing","annual_summary","urban_collection"];
+    const modal = ["receipts_summary","tank_stock","dispatches_summary","customer_activity","supplier_activity","quarterly_closing","annual_summary","urban_collection","customers_list","suppliers_list"];
     return modal.includes(id) ? "📊 View Report" : `⬇ Download ${yearFilter}`;
   };
 
@@ -806,7 +872,176 @@ export default function Reports() {
           </div>
         </div>
       )}
+      {/* ══ CUSTOMERS LIST ══ */}
+      {custListOpen && (
+        <div className="modal-overlay" onClick={() => setCustListOpen(false)}>
+          <div className="modal" style={{ maxWidth: "900px", maxHeight: "92vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
+              <div>
+                <h2>📋 Customers List</h2>
+                <p style={{ fontSize: "13px", color: "#6b7280", margin: "2px 0 0" }}>
+                  {custListData ? `${custListData.total} customers` : "All customers"}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={downloadCustListPdf} disabled={dlCustList}
+                  style={{ padding: "8px 16px", background: "#0369a1", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}>
+                  {dlCustList ? "Downloading..." : "⬇ Download PDF"}
+                </button>
+                <button className="modal-close" onClick={() => setCustListOpen(false)}>✕</button>
+              </div>
+            </div>
+            <div style={{ padding: "16px 24px 24px" }}>
+              {custListLoading ? <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>Loading...</p>
+                : custListError ? <div className="error-banner">{custListError}</div>
+                : !custListData?.customers?.length ? <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>No customers found.</p>
+                : (
+                  <div className="table-wrapper" style={{ margin: 0 }}>
+                    <table className="customers-table">
+                      <thead>
+                        <tr><th>#</th><th>Name</th><th>CIF</th><th>Address</th><th>Email</th><th>Phone</th></tr>
+                      </thead>
+                      <tbody>
+                        {custListData.customers.map((c, idx) => (
+                          <tr key={c.id} className="table-row">
+                            <td style={{ textAlign: "center", color: "#9ca3af", fontSize: "12px" }}>{idx + 1}</td>
+                            <td className="td-name">{c.name}</td>
+                            <td style={{ fontFamily: "monospace", fontSize: "13px" }}>{c.cif || "—"}</td>
+                            <td style={{ fontSize: "13px", color: "#6b7280" }}>{c.address || "—"}</td>
+                            <td style={{ fontSize: "13px", color: "#6b7280" }}>{c.email || "—"}</td>
+                            <td style={{ fontSize: "13px" }}>{c.phone || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
 
+      {/* ══ SUPPLIERS LIST ══ */}
+      {suppListOpen && (
+        <div className="modal-overlay" onClick={() => setSuppListOpen(false)}>
+          <div className="modal" style={{ maxWidth: "960px", maxHeight: "92vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
+              <div>
+                <h2>📋 Suppliers List</h2>
+                <p style={{ fontSize: "13px", color: "#6b7280", margin: "2px 0 0" }}>
+                  {suppListData ? `${suppListData.total} suppliers · ${suppListData.horeca_count} Horeca · ${suppListData.urban_count} Urban` : "All suppliers"}
+                </p>
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={downloadSuppListPdf} disabled={dlSuppList}
+                  style={{ padding: "8px 16px", background: "#059669", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}>
+                  {dlSuppList ? "Downloading..." : "⬇ Download PDF"}
+                </button>
+                <button className="modal-close" onClick={() => setSuppListOpen(false)}>✕</button>
+              </div>
+            </div>
+            <div style={{ padding: "16px 24px 24px" }}>
+
+              {/* Filters */}
+              <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", background: "#f0fdf4", border: "1.5px solid #6ee7b7", borderRadius: "10px", padding: "14px 16px", marginBottom: "20px", flexWrap: "wrap" }}>
+                <div>
+                  <label style={{ fontSize: "12px", fontWeight: "600", color: "#374151", display: "block", marginBottom: "4px" }}>Type</label>
+                  <select value={suppListFilters.supplier_type}
+                    onChange={(e) => { const f={...suppListFilters, supplier_type:e.target.value, supplier_id:""}; setSuppListFilters(f); fetchSuppList(f); }}
+                    style={{ padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: "7px", fontSize: "14px", background: "#fff" }}>
+                    <option value="">All types</option>
+                    <option value="Horeca">Horeca only</option>
+                    <option value="Urban">Urban only</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: "12px", fontWeight: "600", color: "#374151", display: "block", marginBottom: "4px" }}>Specific Supplier</label>
+                  <select value={suppListFilters.supplier_id}
+                    onChange={(e) => { const f={...suppListFilters, supplier_id:e.target.value}; setSuppListFilters(f); fetchSuppList(f); }}
+                    style={{ padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: "7px", fontSize: "14px", background: "#fff", minWidth: "200px" }}>
+                    <option value="">All suppliers</option>
+                    {suppliers
+                      .filter((s) => !suppListFilters.supplier_type || s.supplier_type === suppListFilters.supplier_type)
+                      .map((s) => <option key={s.id} value={s.id}>{s.name} ({s.supplier_type})</option>)}
+                  </select>
+                </div>
+                {(suppListFilters.supplier_type || suppListFilters.supplier_id) && (
+                  <button onClick={() => { const f={supplier_type:"",supplier_id:""}; setSuppListFilters(f); fetchSuppList(f); }}
+                    style={{ padding: "7px 14px", borderRadius: "7px", border: "1.5px solid #e5e7eb", background: "#fff", color: "#6b7280", fontSize: "13px", cursor: "pointer" }}>
+                    Clear
+                  </button>
+                )}
+              </div>
+
+              {suppListLoading ? <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>Loading...</p>
+                : suppListError ? <div className="error-banner">{suppListError}</div>
+                : !suppListData?.suppliers?.length ? <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>No suppliers found.</p>
+                : (
+                  <>
+                    <div className="table-wrapper" style={{ margin: 0 }}>
+                      <table className="customers-table">
+                        <thead>
+                          <tr><th>#</th><th>Name</th><th>Type</th><th>CIF</th><th>Address</th><th>Email</th><th>Phone</th><th>Pickup Pts</th></tr>
+                        </thead>
+                        <tbody>
+                          {suppListData.suppliers.map((s, idx) => (
+                            <tr key={s.id} className="table-row">
+                              <td style={{ textAlign: "center", color: "#9ca3af", fontSize: "12px" }}>{idx + 1}</td>
+                              <td className="td-name">{s.name}</td>
+                              <td><TypeBadge type={s.supplier_type} /></td>
+                              <td style={{ fontFamily: "monospace", fontSize: "13px" }}>{s.cif || "—"}</td>
+                              <td style={{ fontSize: "13px", color: "#6b7280" }}>{s.address || "—"}</td>
+                              <td style={{ fontSize: "13px", color: "#6b7280" }}>{s.email || "—"}</td>
+                              <td style={{ fontSize: "13px" }}>{s.phone || "—"}</td>
+                              <td style={{ textAlign: "center", fontWeight: "600", color: s.pickup_points?.length > 0 ? "#2d7a4f" : "#9ca3af" }}>
+                                {s.pickup_points?.length || "—"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Urban pickup points detail */}
+                    {suppListData.suppliers.filter(s => s.supplier_type === "Urban" && s.pickup_points?.length > 0).map(s => (
+                      <div key={s.id} style={{ marginTop: "20px" }}>
+                        <p style={{ fontWeight: "700", fontSize: "14px", color: "#15803d", margin: "0 0 10px" }}>
+                          📍 {s.name} — Pickup Points
+                        </p>
+                        <div className="table-wrapper" style={{ margin: 0 }}>
+                          <table className="customers-table">
+                            <thead>
+                              <tr>
+                                <th style={{ background: "#8dc63f", color: "#fff" }}>Pickup Point</th>
+                                <th style={{ background: "#8dc63f", color: "#fff" }}>Latitude</th>
+                                <th style={{ background: "#8dc63f", color: "#fff" }}>Longitude</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {s.pickup_points.map((pp) => (
+                                <tr key={pp.id} className="table-row">
+                                  <td className="td-name">{pp.name}</td>
+                                  <td style={{ fontFamily: "monospace", fontSize: "13px", textAlign: "center" }}>
+                                    {pp.latitude ? pp.latitude.toFixed(6) : "—"}
+                                  </td>
+                                  <td style={{ fontFamily: "monospace", fontSize: "13px", textAlign: "center" }}>
+                                    {pp.longitude ? pp.longitude.toFixed(6) : "—"}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>  
+                    ))}
+                  </>
+                )}
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
