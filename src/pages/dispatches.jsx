@@ -69,6 +69,22 @@ export default function Dispatches() {
   const [invoiceError, setInvoiceError] = useState(null);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
+  // ── Documents state ──────────────────────────────────────
+  const [documents, setDocuments] = useState(null);   // { dispatch_id, documents: [...] }
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [uploading, setUploading] = useState({});     // { doc_type: bool }
+  const [docError, setDocError] = useState(null);
+
+  const DOC_TYPES = [
+    { key: "transport_documentation",   label: "Transport Documentation",    icon: "🚚" },
+    { key: "waste_identification",      label: "Waste Identification",       icon: "♻️" },
+    { key: "purchase_order",            label: "Purchase Order",             icon: "🛒" },
+    { key: "identification_document",   label: "Identification Document",    icon: "🪪" },
+    { key: "purchase_offer_contract",   label: "Purchase Offer and Contract",icon: "📝" },
+    { key: "sustainability_declaration",label: "Sustainability Declaration", icon: "🌿" },
+    { key: "analysis",                   label: "Analysis",                    icon: "🔬" }, 
+  ];
+
   // ── Fetch dispatches ─────────────────────────────────────
   const fetchDispatches = useCallback(async () => {
     setLoading(true);
@@ -350,6 +366,64 @@ export default function Dispatches() {
 
   const fmtEur = (v) => v?.toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 
+  // ── Document helpers ─────────────────────────────────────
+  const fetchDocuments = async (dispatchId) => {
+    setDocsLoading(true);
+    setDocError(null);
+    try {
+      const res = await API.get(`/documents/dispatch/${dispatchId}`);
+      setDocuments(res.data);
+    } catch {
+      setDocError("Could not load documents.");
+    } finally {
+      setDocsLoading(false);
+    }
+  };
+
+  const handleUpload = async (docType, file) => {
+    if (!file) return;
+    setUploading((u) => ({ ...u, [docType]: true }));
+    setDocError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await API.post(`/documents/dispatch/${detailDispatch.id}/${docType}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      await fetchDocuments(detailDispatch.id);
+    } catch (err) {
+      setDocError(err.response?.data?.detail || "Upload failed.");
+    } finally {
+      setUploading((u) => ({ ...u, [docType]: false }));
+    }
+  };
+
+  const handleDeleteDoc = async (docId) => {
+    try {
+      await API.delete(`/documents/${docId}`);
+      await fetchDocuments(detailDispatch.id);
+    } catch {
+      setDocError("Could not delete document.");
+    }
+  };
+
+  const handleDownload = (docId, filename) => {
+    const url = `${config.apiUrl}/documents/${docId}/download`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   // ── Helpers ──────────────────────────────────────────────
   const formatDate = (d) => {
     if (!d) return "—";
@@ -416,7 +490,7 @@ export default function Dispatches() {
                     </span>
                   </td>
                   <td className="td-actions">
-                    <button className="btn-edit" onClick={() => setDetailDispatch(d)}>View</button>
+                    <button className="btn-edit" onClick={() => { setDetailDispatch(d); fetchDocuments(d.id); }}>View</button>
                     <button className="btn-edit" onClick={() => openEdit(d)}>Edit</button>
                     <button
                       className="btn-edit"
@@ -838,14 +912,23 @@ export default function Dispatches() {
 
       {/* ── Detail Modal ── */}
       {detailDispatch && (
-        <div className="modal-overlay" onClick={() => setDetailDispatch(null)}>
-          <div className="modal" style={{ maxWidth: "560px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>{detailDispatch.batch_id}</h2>
-              <button className="modal-close" onClick={() => setDetailDispatch(null)}>✕</button>
+        <div className="modal-overlay" onClick={() => { setDetailDispatch(null); setDocuments(null); }}>
+          <div className="modal" style={{ maxWidth: "640px", maxHeight: "92vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
+              <div>
+                <h2>{detailDispatch.batch_id}</h2>
+                <p style={{ fontSize: "13px", color: "#6b7280", margin: "2px 0 0" }}>
+                  {detailDispatch.customer?.name} · {formatDate(detailDispatch.date)}
+                </p>
+              </div>
+              <button className="modal-close" onClick={() => { setDetailDispatch(null); setDocuments(null); }}>✕</button>
             </div>
+
             <div style={{ padding: "16px 24px 24px" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+
+              {/* Dispatch info */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "20px" }}>
                 {[
                   ["Customer", detailDispatch.customer?.name || "—"],
                   ["Date", formatDate(detailDispatch.date)],
@@ -860,6 +943,8 @@ export default function Dispatches() {
                   </div>
                 ))}
               </div>
+
+              {/* Entrances */}
               {detailDispatch.entrances?.length > 0 && (
                 <>
                   <p style={{ fontWeight: "600", fontSize: "13px", color: "#374151", marginBottom: "8px" }}>
@@ -879,18 +964,181 @@ export default function Dispatches() {
                   </div>
                 </>
               )}
+
+              {/* Disposal */}
               {detailDispatch.disposal && (
-                <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: "10px", padding: "14px 16px" }}>
+                <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: "10px", padding: "14px 16px", marginBottom: "20px" }}>
                   <p style={{ fontWeight: "700", fontSize: "13px", color: "#92400e", margin: "0 0 10px" }}>Disposal</p>
                   <div style={{ display: "flex", gap: "16px", fontSize: "14px" }}>
                     <span><strong>Date:</strong> {formatDate(detailDispatch.disposal.date)}</span>
                     <span><strong>Quantity:</strong> {detailDispatch.disposal.quantity} kg</span>
-                    {detailDispatch.disposal.notes && (
-                      <span><strong>Notes:</strong> {detailDispatch.disposal.notes}</span>
-                    )}
+                    {detailDispatch.disposal.notes && <span><strong>Notes:</strong> {detailDispatch.disposal.notes}</span>}
                   </div>
                 </div>
               )}
+
+              {/* ── Documents section ── */}
+              <div style={{ borderTop: "2px solid #e5e7eb", paddingTop: "20px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <div>
+                    <p style={{ fontWeight: "700", fontSize: "15px", color: "#1a1a2e", margin: "0 0 2px" }}>
+                      📎 Compliance Documents
+                    </p>
+                    <p style={{ fontSize: "12px", color: "#9ca3af", margin: 0 }}>
+                      {documents ? `${documents.uploaded_types?.length || 0} of 7 uploaded` : "Click to load documents"}
+                    </p>
+                  </div>
+                  {!documents && (
+                    <button
+                      onClick={() => fetchDocuments(detailDispatch.id)}
+                      disabled={docsLoading}
+                      style={{
+                        padding: "8px 16px", background: "#f0f9ff",
+                        border: "1.5px solid #7dd3fc", borderRadius: "8px",
+                        color: "#0369a1", fontSize: "13px", fontWeight: "600",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {docsLoading ? "Loading..." : "📂 Load Documents"}
+                    </button>
+                  )}
+                </div>
+
+                {docError && (
+                  <div className="error-banner" style={{ marginBottom: "12px" }}>{docError}</div>
+                )}
+
+                {documents && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {DOC_TYPES.map(({ key, label, icon }) => {
+                      const docGroup = documents.documents?.find((d) => d.doc_type === key);
+                      const files    = docGroup?.files || [];
+                      const hasFiles = files.length > 0;
+
+                      return (
+                        <div key={key} style={{
+                          border: `1.5px solid ${hasFiles ? "#86efac" : "#e5e7eb"}`,
+                          background: hasFiles ? "#f0fdf4" : "#fff",
+                          borderRadius: "10px",
+                          overflow: "hidden",
+                        }}>
+                          {/* Doc type header */}
+                          <div style={{
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            padding: "10px 14px",
+                          }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                              <span style={{ fontSize: "18px" }}>{icon}</span>
+                              <div>
+                                <p style={{ fontWeight: "600", fontSize: "14px", color: "#1a1a2e", margin: 0 }}>{label}</p>
+                                <p style={{ fontSize: "11px", color: hasFiles ? "#15803d" : "#9ca3af", margin: 0, fontWeight: "600" }}>
+                                  {hasFiles ? `${files.length} file${files.length > 1 ? "s" : ""} uploaded` : "No files uploaded"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Upload button */}
+                            <label style={{
+                              padding: "6px 12px",
+                              background: uploading[key] ? "#f3f4f6" : "#f0f9ff",
+                              border: "1.5px solid #7dd3fc",
+                              borderRadius: "7px",
+                              color: "#0369a1",
+                              fontSize: "12px",
+                              fontWeight: "600",
+                              cursor: uploading[key] ? "not-allowed" : "pointer",
+                              display: "flex", alignItems: "center", gap: "4px",
+                              whiteSpace: "nowrap",
+                            }}>
+                              {uploading[key] ? (
+                                <>
+                                  <span style={{ width:"10px",height:"10px",border:"2px solid #7dd3fc",borderTopColor:"#0369a1",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite" }}/>
+                                  Uploading...
+                                </>
+                              ) : (
+                                <>⬆ Upload</>
+                              )}
+                              <input
+                                type="file"
+                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                                style={{ display: "none" }}
+                                disabled={uploading[key]}
+                                onChange={(e) => {
+                                  if (e.target.files[0]) {
+                                    handleUpload(key, e.target.files[0]);
+                                    e.target.value = "";
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          {/* File list */}
+                          {hasFiles && (
+                            <div style={{ borderTop: "1px solid #dcfce7" }}>
+                              {files.map((file, idx) => (
+                                <div key={file.id} style={{
+                                  display: "flex", alignItems: "center", gap: "10px",
+                                  padding: "8px 14px",
+                                  borderTop: idx > 0 ? "1px solid #f0fdf4" : "none",
+                                  background: "#fff",
+                                }}>
+                                  {/* File icon */}
+                                  <span style={{ fontSize: "16px", flexShrink: 0 }}>
+                                    {file.mime_type === "application/pdf" ? "📑"
+                                      : file.mime_type?.startsWith("image/") ? "🖼️"
+                                      : "📄"}
+                                  </span>
+
+                                  {/* File info */}
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{
+                                      fontSize: "13px", fontWeight: "600", color: "#1a1a2e",
+                                      margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                    }}>
+                                      {file.filename}
+                                    </p>
+                                    <p style={{ fontSize: "11px", color: "#9ca3af", margin: 0 }}>
+                                      {formatFileSize(file.file_size)}
+                                      {file.uploaded_at && ` · ${new Date(file.uploaded_at).toLocaleDateString("en-GB")}`}
+                                    </p>
+                                  </div>
+
+                                  {/* Actions */}
+                                  <button
+                                    onClick={() => handleDownload(file.id, file.filename)}
+                                    title="Download"
+                                    style={{
+                                      padding: "4px 10px", background: "#f0fdf4",
+                                      border: "1px solid #86efac", borderRadius: "6px",
+                                      color: "#15803d", fontSize: "12px", fontWeight: "600",
+                                      cursor: "pointer", flexShrink: 0,
+                                    }}
+                                  >
+                                    ⬇
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteDoc(file.id)}
+                                    title="Delete"
+                                    style={{
+                                      padding: "4px 10px", background: "#fef2f2",
+                                      border: "1px solid #fecaca", borderRadius: "6px",
+                                      color: "#dc2626", fontSize: "12px", fontWeight: "600",
+                                      cursor: "pointer", flexShrink: 0,
+                                    }}
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -9,5 +9,5 @@ from .pickupPoints import PickupPoint
 from .receipt_pickup import ReceiptPickup   
 from .users import User
 from .invoices import Invoice
-
+from .documents import DispatchDocument
 
