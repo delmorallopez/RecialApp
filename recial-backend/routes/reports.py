@@ -1020,7 +1020,7 @@ def get_suppliers_list_pdf(
                for pp in (s.pickup_points or [])]
         data.append({
                 "name":          s.name,
-                "supplier_type": s.supplier_type,
+                "supplier_type": s.supplier_type.value if hasattr(s.supplier_type, "value") else str(s.supplier_type),
                 "cif":           getattr(s, "cif", None),
                 "address":       getattr(s, "address", None),
                 "email":         getattr(s, "email", None),
