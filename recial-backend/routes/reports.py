@@ -1136,7 +1136,7 @@ def _generate_customers_pdf(customers: list) -> bytes:
             cu.get("phone") or "—",
         ])
 
-    col_widths = [10*mm, 45*mm, 28*mm, 52*mm, 38*mm, 22*mm]
+    col_widths = [10*mm, 42*mm, 27*mm, 47*mm, 36*mm, 22*mm]
     tbl = Table(data, colWidths=col_widths, repeatRows=1)
     tbl.setStyle(TableStyle([
         ("BACKGROUND",    (0,0), (-1,0),  GREEN_DARK),
