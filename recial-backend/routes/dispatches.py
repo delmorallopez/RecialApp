@@ -36,8 +36,8 @@ def load_dispatch(dispatch_id: int, db: Session):
         joinedload(Dispatch.tank),
         joinedload(Dispatch.entrances),
         joinedload(Dispatch.disposal),
+        joinedload(Dispatch.documents),
     ).filter(Dispatch.id == dispatch_id).first()
-
 
 @router.get("/", response_model=DispatchListResponse)
 def get_dispatches(
@@ -52,13 +52,13 @@ def get_dispatches(
         joinedload(Dispatch.tank),
         joinedload(Dispatch.entrances),
         joinedload(Dispatch.disposal),
+        joinedload(Dispatch.documents),
     )
     if customer_id:
         query = query.filter(Dispatch.customer_id == customer_id)
     total = query.count()
     dispatches = query.order_by(Dispatch.date.desc()).offset(skip).limit(limit).all()
     return {"total": total, "dispatches": dispatches}
-
 
 @router.get("/{dispatch_id}", response_model=DispatchResponse)
 def get_dispatch(dispatch_id: int, db: Session = Depends(get_db)):

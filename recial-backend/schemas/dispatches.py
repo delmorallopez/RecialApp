@@ -14,6 +14,7 @@ class DisposalResponse(BaseModel):
     date: date_type  
     quantity: int
     notes: Optional[str] = None
+    
     class Config:
         from_attributes = True
 
@@ -78,6 +79,7 @@ class DispatchResponse(DispatchBase):
     tank: Optional[TankInfo] = None
     entrances: list[EntranceInfo] = []
     disposal: Optional[DisposalResponse] = None
+    documents_count: Optional[int] = 0
     created_at: Optional[datetime] = None
 
     class Config:

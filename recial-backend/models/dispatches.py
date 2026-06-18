@@ -25,9 +25,14 @@ class Dispatch(Base):
     value_gei = Column(Integer, default=1)
     quantity = Column(Integer, nullable=False)                  # kg sold
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
 
     # Relationships
     customer = relationship("Customer", backref="dispatches")
     tank = relationship("Tank", backref="dispatches")
     entrances = relationship("Entrance", secondary=dispatch_entrances, backref="dispatches")
     disposal = relationship("Disposal", back_populates="dispatch", uselist=False, cascade="all, delete-orphan")  # ← deletes disposal when dispatch is deleted
+
+@property
+def documents_count(self) -> int:
+    return len(self.documents) if self.documents else 0

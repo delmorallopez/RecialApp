@@ -1165,6 +1165,9 @@ export default function Dispatches() {
                 {deleteTarget.entrances?.length > 0 && (
                   <li><strong>{deleteTarget.entrances.length} entrance batch{deleteTarget.entrances.length !== 1 ? "es" : ""}</strong> will be unlinked</li>
                 )}
+                {deleteTarget.documents_count > 0 && (
+                    <li><strong>{deleteTarget.documents_count} uploaded document{deleteTarget.documents_count !== 1 ? "s" : ""}</strong> will be permanently deleted from the server</li>
+                )}
                 <li>ISCC traceability record for post number <strong>{deleteTarget.post_number || "N/A"}</strong> will be permanently lost</li>
               </ul>
             </div>

@@ -5,7 +5,7 @@ from datetime import date
 
 from database import get_db
 from models.receipts import Receipt
-from models.suppliers import Supplier
+from models.suppliers import Supplier, SupplierType
 from models.receipt_pickup import ReceiptPickup
 from schemas.receipts import (
     ReceiptCreate,
@@ -26,6 +26,44 @@ def load_receipt(receipt_id: int, db: Session):
         joinedload(Receipt.supplier),
         joinedload(Receipt.pickup_quantities).joinedload(ReceiptPickup.pickup_point),
     ).filter(Receipt.id == receipt_id).first()
+
+
+def generate_receipt_code(db: Session, receipt_date: date, supplier_type: SupplierType) -> str:
+    """
+    Generate the next receipt_code for the given year.
+
+    Format: "{NN}{LETTER}" e.g. "01A", "02B", "03B", "04A"
+      - NN: shared sequence number across Horeca and Urban, zero-padded to 2 digits,
+            resets to 01 at the start of each calendar year (based on receipt date).
+      - LETTER: "A" for Horeca, "B" for Urban.
+    """
+    year = receipt_date.year
+
+    # Pull every receipt_code already used this year (any letter) and find the
+    # highest numeric prefix. We filter in Python since receipt_code's numeric
+    # prefix isn't a separate column.
+    existing_codes = (
+        db.query(Receipt.receipt_code)
+        .filter(Receipt.date >= date(year, 1, 1), Receipt.date <= date(year, 12, 31))
+        .filter(Receipt.receipt_code.isnot(None))
+        .all()
+    )
+
+    max_seq = 0
+    for (code,) in existing_codes:
+        if not code:
+            continue
+        digits = "".join(ch for ch in code if ch.isdigit())
+        if digits:
+            try:
+                seq = int(digits)
+                max_seq = max(max_seq, seq)
+            except ValueError:
+                pass
+
+    next_seq = max_seq + 1
+    letter = "A" if supplier_type == SupplierType.HORECA else "B"
+    return f"{next_seq:02d}{letter}"
 
 
 # ── GET /receipts/ ───────────────────────────────────────────
@@ -85,8 +123,13 @@ def create_receipt(receipt_data: ReceiptCreate, db: Session = Depends(get_db), c
     else:
         total_kg = receipt_data.quantity_kg
 
+    # Generate traceability code: "{NN}{A|B}" — A=Horeca, B=Urban,
+    # shared sequence resetting each calendar year (based on receipt date).
+    receipt_code = generate_receipt_code(db, receipt_data.date, supplier.supplier_type)
+
     # Create the receipt
     new_receipt = Receipt(
+        receipt_code=receipt_code,
         supplier_id=receipt_data.supplier_id,
         driver_id=receipt_data.driver_id,
         raw_material=receipt_data.raw_material,

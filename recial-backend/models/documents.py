@@ -2,7 +2,7 @@
 
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from database import Base
 
 
@@ -39,4 +39,4 @@ class DispatchDocument(Base):
     file_size   = Column(Integer, nullable=True)       # bytes
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    dispatch = relationship("Dispatch", backref="documents")
+    dispatch = relationship("Dispatch", backref=backref("documents", cascade="all, delete-orphan"))

@@ -41,6 +41,7 @@ const REPORT_SECTIONS = [
     reports: [
       { id: "quarterly_closing",  title: "Quarterly Closing",   description: "CIERRES TRIMESTRALES — quarterly breakdown of entrances, losses (mermas) and dispatches grouped by quarter.",       format: "View + Excel",   icon: "📅", color: "#0369a1", bgColor: "#f0f9ff", borderColor: "#7dd3fc" },
       { id: "annual_summary",     title: "Annual Summary",      description: "Full year overview — monthly entrances, losses, dispatches, running stock, and Horeca / Urban split.",               format: "View in modal",  icon: "📆", color: "#0f172a", bgColor: "#f8fafc", borderColor: "#cbd5e1" },
+      { id: "traceability_trace", title: "Batch Traceability",  description: "Full chain-of-custody trace, forward (Receipt→Dispatch) or backward (Dispatch→Receipt), with all batch IDs at each step.", format: "View + PDF",   icon: "🧬", color: "#9d174d", bgColor: "#fdf2f8", borderColor: "#fbcfe8" },
     ],
   },
 ];
@@ -131,6 +132,18 @@ export default function Reports() {
   });
   const [downloadingUrban, setDownloadingUrban] = useState(false);
 
+  // ── Traceability ──────────────────────────────────────────
+  const [traceOpen,       setTraceOpen]       = useState(false);
+  const [traceDirection,  setTraceDirection]  = useState("forward"); // "forward" | "backward"
+  const [traceSearchQ,    setTraceSearchQ]    = useState("");
+  const [traceSearchRes,  setTraceSearchRes]  = useState(null);
+  const [traceSearching,  setTraceSearching]  = useState(false);
+  const [traceSelected,   setTraceSelected]   = useState(null); // {id, batch_id, type}
+  const [traceData,       setTraceData]       = useState(null);
+  const [traceLoading,    setTraceLoading]    = useState(false);
+  const [traceError,      setTraceError]      = useState(null);
+  const [dlTracePdf,      setDlTracePdf]      = useState(false);
+
   // ── Shared data ───────────────────────────────────────────
   const [suppliers, setSuppliers] = useState([]);
   const [customers, setCustomers] = useState([]);
@@ -154,6 +167,7 @@ export default function Reports() {
     if (reportId === "supplier_activity")  { setSupplierActOpen(true); fetchSupplierActivity(); return; }
     if (reportId === "quarterly_closing")  { setQuarterOpen(true);     fetchQuarterly(quarterYear); return; }
     if (reportId === "annual_summary")     { setAnnualOpen(true);      fetchAnnual(annualYear); return; }
+    if (reportId === "traceability_trace") { setTraceOpen(true); return; }
     if (reportId === "customers_list")     { setCustListOpen(true); fetchCustList(); return; }
     if (reportId === "suppliers_list")     { setSuppListOpen(true); fetchSuppList(); return; }
     if (reportId === "urban_collection")   { setUrbanOpen(true); return; }
@@ -319,6 +333,62 @@ export default function Reports() {
     finally { setDownloadingQuarter(false); }
   };
 
+  // ── Traceability ──────────────────────────────────────────
+  const searchTraceBatch = async (q) => {
+    setTraceSearchQ(q);
+    if (!q || q.length < 2) { setTraceSearchRes(null); return; }
+    setTraceSearching(true);
+    try {
+      const res = await API.get(`/traceability/search?q=${encodeURIComponent(q)}`);
+      setTraceSearchRes(res.data);
+    } catch { setTraceSearchRes(null); }
+    finally { setTraceSearching(false); }
+  };
+
+  const selectTraceBatch = (item) => {
+    setTraceSelected(item);
+    setTraceSearchRes(null);
+    setTraceSearchQ(item.batch_id);
+    if (item.type === "receipt") setTraceDirection("forward");
+    if (item.type === "dispatch") setTraceDirection("backward");
+    fetchTrace(item, item.type === "receipt" ? "forward" : item.type === "dispatch" ? "backward" : traceDirection);
+  };
+
+  const fetchTrace = async (item = traceSelected, direction = traceDirection) => {
+    if (!item) return;
+    setTraceLoading(true); setTraceError(null); setTraceData(null);
+    try {
+      const endpoint = direction === "forward" ? `/traceability/forward/${item.id}` : `/traceability/backward/${item.id}`;
+      const res = await API.get(endpoint);
+      setTraceData(res.data);
+    } catch (err) {
+      setTraceError(err.response?.data?.detail || "Could not trace this batch. Make sure it matches the trace direction (Receipt for forward, Dispatch for backward).");
+    } finally {
+      setTraceLoading(false);
+    }
+  };
+
+  const downloadTracePdf = async () => {
+    if (!traceSelected) return;
+    setDlTracePdf(true);
+    try {
+      const endpoint = traceDirection === "forward"
+        ? `/traceability/forward/${traceSelected.id}/pdf`
+        : `/traceability/backward/${traceSelected.id}/pdf`;
+      const res = await fetch(`${config.apiUrl}${endpoint}`,
+        { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } });
+      const blob = await res.blob();
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+      a.download = `Trace_${traceDirection}_${traceSelected.batch_id}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+    } catch { setTraceError("Could not download PDF."); }
+    finally { setDlTracePdf(false); }
+  };
+
+  const resetTrace = () => {
+    setTraceSelected(null); setTraceData(null); setTraceSearchQ(""); setTraceSearchRes(null); setTraceError(null);
+  };
+
   // ── Helpers ──────────────────────────────────────────────
   const fmt = (d) => { if(!d)return"—"; const[y,m,day]=d.split("-"); return`${day}/${m}/${y}`; };
   const fmtEur = (v) => `${v?.toLocaleString("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2})} €`;
@@ -336,7 +406,7 @@ export default function Reports() {
   const selectedTankData = tankData?.tanks?.find((t) => t.id === selectedTank);
 
   const btnLabel = (id) => {
-    const modal = ["receipts_summary","tank_stock","dispatches_summary","customer_activity","supplier_activity","quarterly_closing","annual_summary","urban_collection","customers_list","suppliers_list"];
+    const modal = ["receipts_summary","tank_stock","dispatches_summary","customer_activity","supplier_activity","quarterly_closing","annual_summary","urban_collection","customers_list","suppliers_list","traceability_trace"];
     return modal.includes(id) ? "📊 View Report" : `⬇ Download ${yearFilter}`;
   };
 
@@ -872,6 +942,7 @@ export default function Reports() {
           </div>
         </div>
       )}
+
       {/* ══ CUSTOMERS LIST ══ */}
       {custListOpen && (
         <div className="modal-overlay" onClick={() => setCustListOpen(false)}>
@@ -1042,6 +1113,264 @@ export default function Reports() {
           </div>
         </div>
       )}
+
+      {/* ══════════════════════════════════════════════════════
+          BATCH TRACEABILITY MODAL
+      ══════════════════════════════════════════════════════ */}
+      {traceOpen && (
+        <div className="modal-overlay" onClick={() => { setTraceOpen(false); resetTrace(); }}>
+          <div className="modal" style={{ maxWidth: "1000px", maxHeight: "92vh", overflowY: "auto" }}
+            onClick={(e) => e.stopPropagation()}>
+
+            <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
+              <div>
+                <h2>🧬 Batch Traceability</h2>
+                <p style={{ fontSize: "13px", color: "#6b7280", margin: "2px 0 0" }}>
+                  Full chain of custody — every batch ID at every step
+                </p>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {traceData && (
+                  <button onClick={downloadTracePdf} disabled={dlTracePdf}
+                    style={{ padding: "8px 16px", background: "#9d174d", color: "#fff", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: "700", cursor: "pointer" }}>
+                    {dlTracePdf ? "Downloading..." : "⬇ Download PDF"}
+                  </button>
+                )}
+                <button className="modal-close" onClick={() => { setTraceOpen(false); resetTrace(); }}>✕</button>
+              </div>
+            </div>
+
+            <div style={{ padding: "16px 24px 24px" }}>
+
+              {/* Direction toggle */}
+              <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+                {[
+                  { key: "forward",  label: "→ Forward",  sub: "Receipt → Entrance → Dispatch", color: "#1d4ed8", bg: "#eff6ff" },
+                  { key: "backward", label: "← Backward", sub: "Dispatch → Entrance → Receipt", color: "#b45309", bg: "#fffbeb" },
+                ].map((opt) => (
+                  <button key={opt.key}
+                    onClick={() => { setTraceDirection(opt.key); resetTrace(); }}
+                    style={{
+                      flex: 1, textAlign: "left", padding: "12px 16px",
+                      borderRadius: "10px",
+                      border: `2px solid ${traceDirection === opt.key ? opt.color : "#e5e7eb"}`,
+                      background: traceDirection === opt.key ? opt.bg : "#fff",
+                      cursor: "pointer",
+                    }}>
+                    <p style={{ fontWeight: "800", fontSize: "15px", color: traceDirection === opt.key ? opt.color : "#374151", margin: "0 0 2px" }}>{opt.label}</p>
+                    <p style={{ fontSize: "12px", color: "#9ca3af", margin: 0 }}>{opt.sub}</p>
+                  </button>
+                ))}
+              </div>
+
+              {/* Search box */}
+              <div style={{ position: "relative", marginBottom: "20px" }}>
+                <input
+                  type="text"
+                  placeholder={traceDirection === "forward" ? "Search Receipt batch ID (e.g. REC-2026-001)..." : "Search Dispatch batch ID (e.g. DSP-2026-001)..."}
+                  value={traceSearchQ}
+                  onChange={(e) => searchTraceBatch(e.target.value)}
+                  style={{
+                    width: "100%", padding: "12px 16px", fontSize: "14px",
+                    border: "1.5px solid #e5e7eb", borderRadius: "10px",
+                  }}
+                />
+                {traceSearching && (
+                  <span style={{ position: "absolute", right: "16px", top: "13px", fontSize: "12px", color: "#9ca3af" }}>Searching...</span>
+                )}
+
+                {/* Search results dropdown */}
+                {traceSearchRes && (
+                  <div style={{
+                    position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+                    background: "#fff", border: "1.5px solid #e5e7eb", borderRadius: "10px",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)", zIndex: 20,
+                    maxHeight: "280px", overflowY: "auto",
+                  }}>
+                    {(traceDirection === "forward" ? traceSearchRes.receipts : traceSearchRes.dispatches).length === 0 ? (
+                      <p style={{ padding: "16px", color: "#9ca3af", fontSize: "13px", margin: 0 }}>
+                        No {traceDirection === "forward" ? "receipts" : "dispatches"} found matching "{traceSearchQ}"
+                      </p>
+                    ) : (
+                      (traceDirection === "forward" ? traceSearchRes.receipts : traceSearchRes.dispatches).map((item) => (
+                        <div key={item.id} onClick={() => selectTraceBatch(item)}
+                          style={{ padding: "12px 16px", cursor: "pointer", borderBottom: "1px solid #f3f4f6", fontSize: "14px" }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = "#f8fafc"}
+                          onMouseLeave={(e) => e.currentTarget.style.background = "#fff"}>
+                          <span style={{ fontFamily: "monospace", fontWeight: "700" }}>{item.batch_id}</span>
+                          <span style={{ color: "#9ca3af", marginLeft: "8px" }}>{item.label.split("—")[1]}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {traceError && <div className="error-banner">{traceError}</div>}
+
+              {traceLoading && <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>Tracing chain of custody...</p>}
+
+              {!traceData && !traceLoading && !traceSelected && (
+                <div style={{ textAlign: "center", padding: "48px 0", color: "#9ca3af" }}>
+                  <p style={{ fontSize: "40px", marginBottom: "12px" }}>🧬</p>
+                  <p style={{ fontSize: "15px", fontWeight: "600", margin: "0 0 6px" }}>
+                    Search for a {traceDirection === "forward" ? "Receipt" : "Dispatch"} batch ID above
+                  </p>
+                  <p style={{ fontSize: "13px", margin: 0 }}>
+                    {traceDirection === "forward"
+                      ? "Trace forward to see which Entrances and Dispatches it fed into"
+                      : "Trace backward to see which Entrances and Receipts are behind it"}
+                  </p>
+                </div>
+              )}
+
+              {/* Tree visualization + results */}
+              {traceData && !traceLoading && (
+                <>
+                  {/* Summary banner */}
+                  <div style={{
+                    background: traceData.summary.fully_traced ? "#f0fdf4" : "#fffbeb",
+                    border: `1.5px solid ${traceData.summary.fully_traced ? "#86efac" : "#fcd34d"}`,
+                    borderRadius: "12px", padding: "14px 18px", marginBottom: "20px",
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                  }}>
+                    <div>
+                      <p style={{ fontWeight: "700", fontSize: "14px", color: traceData.summary.fully_traced ? "#15803d" : "#92400e", margin: "0 0 2px" }}>
+                        {traceData.summary.fully_traced ? "✓ Full chain traced" : "⚠ Incomplete chain"}
+                      </p>
+                      <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
+                        Root: <strong style={{ fontFamily: "monospace" }}>{traceData.root.batch_id}</strong>
+                      </p>
+                    </div>
+                    <div style={{ display: "flex", gap: "20px" }}>
+                      {traceDirection === "forward" ? (
+                        <>
+                          <div style={{ textAlign: "center" }}>
+                            <p style={{ fontSize: "10px", color: "#9ca3af", margin: "0 0 2px" }}>ENTRANCES</p>
+                            <p style={{ fontSize: "18px", fontWeight: "800", color: "#2d7a4f", margin: 0 }}>{traceData.summary.total_entrances}</p>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <p style={{ fontSize: "10px", color: "#9ca3af", margin: "0 0 2px" }}>DISPATCHES</p>
+                            <p style={{ fontSize: "18px", fontWeight: "800", color: "#b45309", margin: 0 }}>{traceData.summary.total_dispatches}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ textAlign: "center" }}>
+                            <p style={{ fontSize: "10px", color: "#9ca3af", margin: "0 0 2px" }}>ENTRANCES</p>
+                            <p style={{ fontSize: "18px", fontWeight: "800", color: "#2d7a4f", margin: 0 }}>{traceData.summary.total_entrances}</p>
+                          </div>
+                          <div style={{ textAlign: "center" }}>
+                            <p style={{ fontSize: "10px", color: "#9ca3af", margin: "0 0 2px" }}>RECEIPTS</p>
+                            <p style={{ fontSize: "18px", fontWeight: "800", color: "#1d4ed8", margin: 0 }}>{traceData.summary.total_receipts}</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tree diagram */}
+                  <div style={{ background: "#fafafa", border: "1.5px solid #e5e7eb", borderRadius: "12px", padding: "20px", marginBottom: "20px", overflowX: "auto" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", minWidth: "600px" }}>
+
+                      {/* Root node */}
+                      <div style={{
+                        background: traceDirection === "forward" ? "#1d4ed8" : "#b45309",
+                        color: "#fff", borderRadius: "10px", padding: "10px 20px",
+                        fontWeight: "700", fontSize: "14px", fontFamily: "monospace",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                      }}>
+                        {traceDirection === "forward" ? "📋" : "🚚"} {traceData.root.batch_id}
+                      </div>
+
+                      {/* Connector */}
+                      <div style={{ width: "2px", height: "24px", background: "#d1d5db" }} />
+
+                      {/* Entrance row */}
+                      <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center", position: "relative" }}>
+                        {traceData.entrances.map((en) => (
+                          <div key={en.id} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+                            <div style={{
+                              background: "#2d7a4f", color: "#fff", borderRadius: "10px",
+                              padding: "8px 16px", fontWeight: "700", fontSize: "13px", fontFamily: "monospace",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
+                            }}>
+                              🛢️ {en.batch_id}
+                            </div>
+                            <p style={{ fontSize: "11px", color: "#6b7280", margin: "4px 0 0" }}>
+                              {en.quantity_kg?.toFixed(0)} kg · {en.tank_name || "—"}
+                            </p>
+
+                            {/* Connector down to leaves */}
+                            <div style={{ width: "2px", height: "20px", background: "#d1d5db" }} />
+
+                            {/* Leaves (dispatches or receipts) */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "center" }}>
+                              {(traceDirection === "forward" ? en.dispatches : en.receipts).length === 0 ? (
+                                <div style={{ fontSize: "11px", color: "#d1d5db", fontStyle: "italic", padding: "6px 0" }}>none yet</div>
+                              ) : (
+                                (traceDirection === "forward" ? en.dispatches : en.receipts).map((leaf) => (
+                                  <div key={leaf.id} style={{
+                                    background: traceDirection === "forward" ? "#fffbeb" : "#eff6ff",
+                                    border: `1.5px solid ${traceDirection === "forward" ? "#fcd34d" : "#93c5fd"}`,
+                                    borderRadius: "8px", padding: "6px 12px",
+                                    fontSize: "12px", fontFamily: "monospace", fontWeight: "700",
+                                    color: traceDirection === "forward" ? "#92400e" : "#1d4ed8",
+                                  }}>
+                                    {traceDirection === "forward" ? "🚚" : "📋"} {leaf.batch_id}
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Detailed table per entrance */}
+                  {traceData.entrances.map((en) => (
+                    <div key={en.id} style={{ marginBottom: "16px" }}>
+                      <p style={{ fontWeight: "700", fontSize: "13px", color: "#2d7a4f", margin: "0 0 8px" }}>
+                        🛢️ Entrance {en.batch_id} — {en.quantity_kg?.toFixed(0)} kg
+                      </p>
+                      <div className="table-wrapper" style={{ margin: 0 }}>
+                        <table className="customers-table">
+                          <thead>
+                            <tr>
+                              <th>{traceDirection === "forward" ? "Dispatch" : "Receipt"} Batch</th>
+                              <th>Date</th>
+                              <th>{traceDirection === "forward" ? "Customer" : "Supplier"}</th>
+                              <th>Quantity (kg)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(traceDirection === "forward" ? en.dispatches : en.receipts).length === 0 ? (
+                              <tr><td colSpan={4} className="table-state">No linked records yet</td></tr>
+                            ) : (
+                              (traceDirection === "forward" ? en.dispatches : en.receipts).map((leaf) => (
+                                <tr key={leaf.id} className="table-row">
+                                  <td style={{ fontFamily: "monospace", fontWeight: "700" }}>{leaf.batch_id}</td>
+                                  <td>{fmt(leaf.date)}</td>
+                                  <td className="td-name">{traceDirection === "forward" ? leaf.customer_name : leaf.supplier_name}</td>
+                                  <td style={{ fontWeight: "700", color: "#2d7a4f" }}>
+                                    {(traceDirection === "forward" ? leaf.quantity : leaf.quantity_kg)?.toFixed(0)} kg
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );

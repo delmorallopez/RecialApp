@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Float, String, Date, DateTime, ForeignKey
 from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from database import Base
 
 
@@ -21,4 +21,4 @@ class Invoice(Base):
     created_at     = Column(DateTime(timezone=True), server_default=func.now())
     updated_at     = Column(DateTime(timezone=True), onupdate=func.now())
 
-    dispatch = relationship("Dispatch", backref="invoice", uselist=False)
+    dispatch = relationship("Dispatch", backref=backref("invoice", uselist=False, cascade="all, delete-orphan"))
