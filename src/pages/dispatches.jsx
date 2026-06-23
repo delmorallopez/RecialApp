@@ -76,13 +76,13 @@ export default function Dispatches() {
   const [docError, setDocError] = useState(null);
 
   const DOC_TYPES = [
-    { key: "transport_documentation",   label: "Transport Documentation",    icon: "🚚" },
-    { key: "waste_identification",      label: "Waste Identification",       icon: "♻️" },
-    { key: "purchase_order",            label: "Purchase Order",             icon: "🛒" },
-    { key: "identification_document",   label: "Identification Document",    icon: "🪪" },
-    { key: "purchase_offer_contract",   label: "Purchase Offer and Contract",icon: "📝" },
-    { key: "sustainability_declaration",label: "Sustainability Declaration", icon: "🌿" },
-    { key: "analysis",                   label: "Analysis",                    icon: "🔬" }, 
+    { key: "transport_documentation",    label: "Documentación de Transporte",      icon: "🚚" },
+    { key: "waste_identification",       label: "Identificación de Residuos",       icon: "♻️" },
+    { key: "purchase_order",             label: "Orden de Compra",                  icon: "🛒" },
+    { key: "identification_document",    label: "Documento de Identificación",      icon: "🪪" },
+    { key: "purchase_offer_contract",    label: "Oferta de Compra y Contrato",      icon: "📝" },
+    { key: "sustainability_declaration", label: "Declaración de Sostenibilidad",    icon: "🌿" },
+    { key: "analysis",                   label: "Análisis",                         icon: "🔬" },
   ];
 
   // ── Fetch dispatches ─────────────────────────────────────
@@ -114,7 +114,7 @@ export default function Dispatches() {
       setEntrances(entRes.data.entrances);
       setTanks(tankRes.data.tanks.filter((t) => t.is_active));
     } catch {
-      setFormError("Could not load dropdown data.");
+      setFormError("No se pudieron cargar los datos del formulario.");
     }
   };
 
@@ -169,13 +169,13 @@ export default function Dispatches() {
   // ── Submit dispatch ──────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.customer_id) { setFormError("Please select a customer."); return; }
-    if (!form.date) { setFormError("Date is required."); return; }
+    if (!form.customer_id) { setFormError("Por favor, selecciona un cliente."); return; }
+    if (!form.date) { setFormError("La fecha es obligatoria."); return; }
     if (!form.quantity || parseInt(form.quantity) <= 0) {
-      setFormError("Quantity must be greater than 0."); return;
+      setFormError("La cantidad debe ser mayor que 0."); return;
     }
     if (form.has_disposal && (!form.disposal_quantity || parseInt(form.disposal_quantity) <= 0)) {
-      setFormError("Disposal quantity must be greater than 0."); return;
+      setFormError("La cantidad de merma debe ser mayor que 0."); return;
     }
 
     setSaving(true);
@@ -206,7 +206,7 @@ export default function Dispatches() {
       fetchDispatches();
     } catch (err) {
       const detail = err.response?.data?.detail;
-      setFormError(typeof detail === "string" ? detail : "Something went wrong.");
+      setFormError(typeof detail === "string" ? detail : "Ha ocurrido un error.");
     } finally {
       setSaving(false);
     }
@@ -220,7 +220,7 @@ export default function Dispatches() {
       setDeleteTarget(null);
       fetchDispatches();
     } catch (err) {
-      setError(err.response?.data?.detail || "Could not delete dispatch.");
+      setError(err.response?.data?.detail || "No se pudo eliminar la venta.");
       setDeleteTarget(null);
     }
   };
@@ -283,7 +283,7 @@ export default function Dispatches() {
   // Save / update invoice
   const saveInvoice = async () => {
     if (!invoiceForm.price_per_kg || parseFloat(invoiceForm.price_per_kg) <= 0) {
-      setInvoiceError("Price per kg must be greater than 0."); return;
+      setInvoiceError("El precio por kg debe ser mayor que 0."); return;
     }
     setInvoiceSaving(true);
     setInvoiceError(null);
@@ -322,7 +322,7 @@ export default function Dispatches() {
         }
       }
     } catch (err) {
-      setInvoiceError(err.response?.data?.detail || "Could not save invoice.");
+      setInvoiceError(err.response?.data?.detail || "No se pudo guardar la factura.");
     } finally {
       setInvoiceSaving(false);
     }
@@ -350,7 +350,7 @@ export default function Dispatches() {
       link.remove();
       window.URL.revokeObjectURL(link.href);
     } catch {
-      setInvoiceError("Could not download PDF.");
+      setInvoiceError("No se pudo descargar el PDF.");
     } finally {
       setDownloadingPdf(false);
     }
@@ -374,7 +374,7 @@ export default function Dispatches() {
       const res = await API.get(`/documents/dispatch/${dispatchId}`);
       setDocuments(res.data);
     } catch {
-      setDocError("Could not load documents.");
+      setDocError("No se pudieron cargar los documentos.");
     } finally {
       setDocsLoading(false);
     }
@@ -392,7 +392,7 @@ export default function Dispatches() {
       });
       await fetchDocuments(detailDispatch.id);
     } catch (err) {
-      setDocError(err.response?.data?.detail || "Upload failed.");
+      setDocError(err.response?.data?.detail || "Error al subir el archivo.");
     } finally {
       setUploading((u) => ({ ...u, [docType]: false }));
     }
@@ -403,7 +403,7 @@ export default function Dispatches() {
       await API.delete(`/documents/${docId}`);
       await fetchDocuments(detailDispatch.id);
     } catch {
-      setDocError("Could not delete document.");
+      setDocError("No se pudo eliminar el documento.");
     }
   };
 
@@ -441,15 +441,15 @@ export default function Dispatches() {
       {/* Header */}
       <div className="customers-header">
         <div>
-          <h1 className="customers-title">Dispatches</h1>
+        <h1 className="customers-title">Salidas</h1>
           <p className="customers-subtitle">
-            {total} dispatch{total !== 1 ? "es" : ""} — <strong>{totalKg.toLocaleString()} kg</strong> sold
+            {total} salida{total !== 1 ? "s" : ""} — <strong>{totalKg.toLocaleString()} kg</strong> vendidos
             {totalDisposal > 0 && (
-              <span style={{ color: "#9ca3af" }}> · {totalDisposal.toLocaleString()} kg disposal</span>
+              <span style={{ color: "#9ca3af" }}> · {totalDisposal.toLocaleString()} kg de merma</span>
             )}
           </p>
         </div>
-        <button className="btn-primary" onClick={openAdd}>+ New Dispatch</button>
+        <button className="btn-primary" onClick={openAdd}>+ Nueva Salida</button>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
@@ -458,16 +458,14 @@ export default function Dispatches() {
       <div className="table-wrapper">
         <table className="customers-table">
           <thead>
-            <tr>
-              <th>Batch ID</th><th>Date</th><th>Customer</th><th>Post №</th>
-              <th>Tank</th><th>Quantity (kg)</th><th>Disposal (kg)</th><th>GEI</th><th>Actions</th>
-            </tr>
+            <th>Código de Lote</th><th>Fecha</th><th>Cliente</th><th>Post №</th>
+            <th>Depósito</th><th>Cantidad (kg)</th><th>Merma (kg)</th><th>GEI</th><th>Acciones</th>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="table-state">Loading...</td></tr>
+              <tr><td colSpan={9} className="table-state">Cargando...</td></tr>
             ) : dispatches.length === 0 ? (
-              <tr><td colSpan={9} className="table-state">No dispatches yet. Create your first one!</td></tr>
+              <tr><td colSpan={9} className="table-state">No hay salidas todavía. ¡Crea la primera!</td></tr>
             ) : (
               dispatches.map((d) => (
                 <tr key={d.id} className="table-row">
@@ -490,16 +488,12 @@ export default function Dispatches() {
                     </span>
                   </td>
                   <td className="td-actions">
-                    <button className="btn-edit" onClick={() => { setDetailDispatch(d); fetchDocuments(d.id); }}>View</button>
-                    <button className="btn-edit" onClick={() => openEdit(d)}>Edit</button>
-                    <button
-                      className="btn-edit"
-                      style={{ background: "#f0fdf4", color: "#15803d" }}
-                      onClick={() => openInvoice(d)}
-                    >
-                      🧾 Invoice
-                    </button>
-                    <button className="btn-delete" onClick={() => setDeleteTarget(d)}>Delete</button>
+                  <button className="btn-edit" onClick={() => { setDetailDispatch(d); fetchDocuments(d.id); }}>Ver</button>
+                  <button className="btn-edit" onClick={() => openEdit(d)}>Editar</button>
+                  <button className="btn-edit" style={{ background: "#f0fdf4", color: "#15803d" }} onClick={() => openInvoice(d)}>
+                      🧾 Factura
+                  </button>
+                  <button className="btn-delete" onClick={() => setDeleteTarget(d)}>Eliminar</button>
                   </td>
                 </tr>
               ))
@@ -509,7 +503,7 @@ export default function Dispatches() {
             <tfoot>
               <tr style={{ background: "#f8fafc", borderTop: "2px solid #e5e7eb" }}>
                 <td colSpan={5} style={{ padding: "12px 16px", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}>
-                  TOTAL ({dispatches.length} dispatches)
+                  TOTAL ({dispatches.length} salidas)
                 </td>
                 <td style={{ padding: "12px 16px", fontWeight: "800", color: "#2d7a4f", fontSize: "15px" }}>
                   {totalKg.toLocaleString()} kg
@@ -535,9 +529,9 @@ export default function Dispatches() {
             {/* Header */}
             <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
               <div>
-                <h2>🧾 Invoice — {invoiceDispatch.batch_id}</h2>
+              <h2>🧾 Factura — {invoiceDispatch.batch_id}</h2>
                 <p style={{ fontSize: "13px", color: "#6b7280", margin: "2px 0 0" }}>
-                  {invoiceData ? "Edit existing invoice" : "Create new invoice"} · {invoiceDispatch.customer?.name}
+                  {invoiceData ? "Editar factura existente" : "Crear nueva factura"} · {invoiceDispatch.customer?.name}
                 </p>
               </div>
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
@@ -553,7 +547,7 @@ export default function Dispatches() {
                   }}
                 >
                   {downloadingPdf ? (
-                    <><span style={{ width:"12px",height:"12px",border:"2px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite" }}/> Generating...</>
+                    <><span style={{ width:"12px",height:"12px",border:"2px solid rgba(255,255,255,0.4)",borderTopColor:"#fff",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite" }}/> Generando...</>
                   ) : "⬇ Download PDF"}
                 </button>
                 <button className="modal-close" onClick={closeInvoice}>✕</button>
@@ -563,7 +557,7 @@ export default function Dispatches() {
             <div style={{ padding: "16px 24px 24px" }}>
 
               {invoiceLoading ? (
-                <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>Loading...</p>
+                <p style={{ textAlign: "center", color: "#9ca3af", padding: "40px 0" }}>Cargando...</p>
               ) : (
                 <>
                   {/* Status badge */}
@@ -576,7 +570,7 @@ export default function Dispatches() {
                       fontSize: "13px", color: "#15803d",
                     }}>
                       <span>✓</span>
-                      <span>Invoice saved — last updated. Any changes will update the existing invoice.</span>
+                      <span>Factura guardada — cualquier cambio actualizará la factura existente.</span>
                     </div>
                   )}
 
@@ -586,9 +580,9 @@ export default function Dispatches() {
                     marginBottom: "20px",
                   }}>
                     {[
-                      ["Dispatch Date", formatDate(invoiceDispatch.date)],
-                      ["Quantity", `${invoiceDispatch.quantity?.toLocaleString()} kg`],
-                      ["Customer", invoiceDispatch.customer?.name || "—"],
+                      ["Fecha de Salida", formatDate(invoiceDispatch.date)],
+                      ["Cantidad", `${invoiceDispatch.quantity?.toLocaleString()} kg`],
+                      ["Cliente", invoiceDispatch.customer?.name || "—"],
                     ].map(([label, value]) => (
                       <div key={label} style={{ background: "#f8fafc", borderRadius: "8px", padding: "10px 12px", border: "1.5px solid #e5e7eb" }}>
                         <p style={{ fontSize: "11px", color: "#9ca3af", fontWeight: "600", textTransform: "uppercase", margin: "0 0 4px" }}>{label}</p>
@@ -603,7 +597,7 @@ export default function Dispatches() {
                     {/* Invoice number + date */}
                     <div className="form-row">
                       <div className="form-group form-group--grow">
-                        <label>Invoice Number</label>
+                        <label>Número de Factura</label>
                         <input type="text"
                           placeholder={invoiceDispatch.batch_id}
                           value={invoiceForm.invoice_number}
@@ -611,7 +605,7 @@ export default function Dispatches() {
                         />
                       </div>
                       <div className="form-group">
-                        <label>Invoice Date</label>
+                        <label>Fecha de Factura</label>
                         <input type="date"
                           value={invoiceForm.invoice_date}
                           onChange={(e) => setInvoiceForm({ ...invoiceForm, invoice_date: e.target.value })}
@@ -622,25 +616,25 @@ export default function Dispatches() {
                     {/* Price + quantity override */}
                     <div className="form-row">
                       <div className="form-group form-group--grow">
-                        <label>Price per kg (€) <span className="required">*</span></label>
+                        <label>Precio por kg (€) <span className="required">*</span></label>
                         <input type="number" step="0.01" min="0.01"
                           placeholder="1.09"
                           value={invoiceForm.price_per_kg}
                           onChange={(e) => setInvoiceForm({ ...invoiceForm, price_per_kg: e.target.value })}
                         />
                         <p style={{ fontSize: "11px", color: "#9ca3af", margin: "4px 0 0" }}>
-                          Default: 1.09 €/kg
+                          Por defecto: 1,09 €/kg
                         </p>
                       </div>
                       <div className="form-group form-group--grow">
-                        <label>Quantity override (kg)</label>
+                        <label>Cantidad personalizada (kg)</label>
                         <input type="number" step="0.1" min="0"
                           placeholder={`${invoiceDispatch.quantity} kg (from dispatch)`}
                           value={invoiceForm.quantity_kg}
                           onChange={(e) => setInvoiceForm({ ...invoiceForm, quantity_kg: e.target.value })}
                         />
                         <p style={{ fontSize: "11px", color: "#9ca3af", margin: "4px 0 0" }}>
-                          Leave empty to use dispatch quantity
+                          Dejar vacío para usar la cantidad de la salida
                         </p>
                       </div>
                       <div className="form-group">
@@ -654,9 +648,9 @@ export default function Dispatches() {
 
                     {/* Notes */}
                     <div className="form-group">
-                      <label>Notes (optional)</label>
+                      <label>Observaciones (optional)</label>
                       <input type="text"
-                        placeholder="Any additional notes..."
+                        placeholder="Observaciones adicionales..."
                         value={invoiceForm.notes}
                         onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
                       />
@@ -668,7 +662,7 @@ export default function Dispatches() {
                       borderRadius: "12px", padding: "16px 20px",
                     }}>
                       <p style={{ fontWeight: "700", fontSize: "13px", color: "#15803d", margin: "0 0 12px" }}>
-                        💶 Invoice Preview
+                        💶 Vista Previa de Factura
                       </p>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "12px" }}>
                         {[
@@ -686,7 +680,7 @@ export default function Dispatches() {
                         {previewQty.toLocaleString()} kg × {invoiceForm.price_per_kg} €/kg
                         {invoiceForm.quantity_kg && (
                           <span style={{ color: "#f59e0b", marginLeft: "8px" }}>
-                            ⚠ Using overridden quantity
+                            ⚠ Usando la cantidad sobreescrita
                           </span>
                         )}
                       </div>
@@ -699,7 +693,7 @@ export default function Dispatches() {
                     {/* Actions */}
                     <div className="modal-actions">
                       <button type="button" className="btn-secondary" onClick={closeInvoice}>
-                        Cancel
+                        Cancelar
                       </button>
                       <button
                         type="button"
@@ -707,7 +701,7 @@ export default function Dispatches() {
                         onClick={saveInvoice}
                         disabled={invoiceSaving}
                       >
-                        {invoiceSaving ? "Saving..." : invoiceData ? "Update Invoice" : "Create Invoice"}
+                        {invoiceSaving ? "Guardando..." : invoiceData ? "Actualizar Factura" : "Crear Factura"}
                       </button>
                     </div>
                   </div>
@@ -725,10 +719,10 @@ export default function Dispatches() {
             onClick={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
               <div>
-                <h2>{editingDispatch ? `Edit ${editingDispatch.batch_id}` : "New Dispatch"}</h2>
+                <h2>{editingDispatch ? `Edit ${editingDispatch.batch_id}` : "Nueva Salida"}</h2>
                 {editingDispatch && (
                   <p style={{ fontSize: "12px", color: "#9ca3af", margin: "2px 0 0" }}>
-                    Batch ID cannot be changed
+                    El còdigo de lote no se puede modificar
                   </p>
                 )}
               </div>
@@ -739,16 +733,16 @@ export default function Dispatches() {
 
               <div className="form-row">
                 <div className="form-group form-group--grow">
-                  <label>Customer <span className="required">*</span></label>
+                  <label>Cliente <span className="required">*</span></label>
                   <select value={form.customer_id}
                     onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
                     style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
-                    <option value="">Select customer...</option>
+                    <option value="">Seleccionar Cliente...</option>
                     {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Date <span className="required">*</span></label>
+                  <label>Fecha <span className="required">*</span></label>
                   <input type="date" value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })} />
                 </div>
@@ -756,11 +750,11 @@ export default function Dispatches() {
 
               <div className="form-row">
                 <div className="form-group form-group--grow">
-                  <label>Tank</label>
+                  <label>Deposito</label>
                   <select value={form.tank_id}
                     onChange={(e) => setForm({ ...form, tank_id: e.target.value })}
                     style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
-                    <option value="">Select tank...</option>
+                    <option value="">Seleccionar Deposito...</option>
                     {tanks.map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.name}{t.capacity ? ` — ${t.stock || 0} / ${t.capacity} kg` : ` — ${t.stock || 0} kg`}
@@ -769,7 +763,7 @@ export default function Dispatches() {
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Post Number (ISCC)</label>
+                  <label>Número de Post (ISCC)</label>
                   <input type="number" placeholder="e.g. 1" value={form.post_number}
                     onChange={(e) => setForm({ ...form, post_number: e.target.value })} />
                 </div>
@@ -777,18 +771,18 @@ export default function Dispatches() {
 
               <div className="form-row">
                 <div className="form-group form-group--grow">
-                  <label>Quantity (kg) <span className="required">*</span></label>
-                  <input type="number" min="1" placeholder="kg to dispatch" value={form.quantity}
+                  <label>Cantidad (kg) <span className="required">*</span></label>
+                  <input type="number" min="1" placeholder="kg a despachar" value={form.quantity}
                     onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
                 </div>
                 <div className="form-group">
-                  <label>Raw Material</label>
+                  <label>Materia Prima</label>
                   <input type="text" value={form.raw_material}
                     onChange={(e) => setForm({ ...form, raw_material: e.target.value })}
                     style={{ background: "#f8fafc" }} />
                 </div>
                 <div className="form-group">
-                  <label>GEI Value</label>
+                  <label>Valor GEI</label>
                   <input type="number" value={form.value_gei}
                     onChange={(e) => setForm({ ...form, value_gei: e.target.value })}
                     style={{ background: "#f8fafc" }} />
@@ -797,16 +791,16 @@ export default function Dispatches() {
 
               <div className="form-group">
                 <label>
-                  Entrance Batches (optional)
+                  Lotes de Entrada (opcional)
                   {form.entrance_ids.length > 0 && (
                     <span style={{ marginLeft: "8px", color: "#2d7a4f", fontWeight: "700" }}>
-                      {form.entrance_ids.length} selected
+                      {form.entrance_ids.length} seleccionados
                     </span>
                   )}
                 </label>
                 {entrances.length === 0 ? (
                   <div style={{ padding: "12px", background: "#f8fafc", borderRadius: "8px", border: "1.5px solid #e5e7eb", color: "#9ca3af", fontSize: "14px" }}>
-                    No entrance batches available
+                    No hay lotes de entrada disponibles
                   </div>
                 ) : (
                   <div style={{ border: "1.5px solid #e5e7eb", borderRadius: "8px", maxHeight: "180px", overflowY: "auto" }}>
@@ -829,7 +823,7 @@ export default function Dispatches() {
                           </div>
                           <span style={{ fontFamily: "monospace", fontWeight: "700", fontSize: "13px" }}>{en.batch_id}</span>
                           <span style={{ color: "#d1d5db" }}>·</span>
-                          <span style={{ fontSize: "13px", color: "#374151" }}>{en.supplier_type === "A" ? "Horeca" : "Urban"}</span>
+                          <span style={{ fontSize: "13px", color: "#374151" }}>{en.supplier_type === "A" ? "Horeca" : "Urbano"}</span>
                           <span style={{ color: "#d1d5db" }}>·</span>
                           <span style={{ fontSize: "13px", color: "#6b7280" }}>{formatDate(en.date)}</span>
                           <span style={{ marginLeft: "auto", fontWeight: "700", color: "#2d7a4f", fontSize: "13px" }}>
@@ -848,7 +842,7 @@ export default function Dispatches() {
                 borderRadius: "10px", padding: "16px",
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: form.has_disposal ? "14px" : "0" }}>
-                  <p style={{ fontWeight: "700", fontSize: "14px", color: "#92400e", margin: 0 }}>Disposal Record</p>
+                  <p style={{ fontWeight: "700", fontSize: "14px", color: "#92400e", margin: 0 }}>Registro de Merma</p>
                   <div style={{ display: "flex", gap: "8px" }}>
                     {[true, false].map((val) => (
                       <button key={String(val)} type="button"
@@ -859,7 +853,7 @@ export default function Dispatches() {
                           background: form.has_disposal === val ? "#fef3c7" : "#fff",
                           color: form.has_disposal === val ? "#92400e" : "#9ca3af",
                           fontWeight: "600", fontSize: "13px", cursor: "pointer",
-                        }}>{val ? "Yes" : "No"}</button>
+                        }}>{val ? "Si" : "No"}</button>
                     ))}
                   </div>
                 </div>
@@ -867,29 +861,29 @@ export default function Dispatches() {
                   <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                     <div className="form-row">
                       <div className="form-group">
-                        <label style={{ fontSize: "13px", color: "#92400e" }}>Disposal Date <span className="required">*</span></label>
+                        <label style={{ fontSize: "13px", color: "#92400e" }}>Fecha de Merma <span className="required">*</span></label>
                         <input type="date" value={form.disposal_date}
                           onChange={(e) => setForm({ ...form, disposal_date: e.target.value })} />
                       </div>
                       <div className="form-group form-group--grow">
-                        <label style={{ fontSize: "13px", color: "#92400e" }}>Disposal Quantity (kg) <span className="required">*</span></label>
-                        <input type="number" min="1" placeholder="Residue in kg" value={form.disposal_quantity}
+                        <label style={{ fontSize: "13px", color: "#92400e" }}>Cantidad de Merma (kg) <span className="required">*</span></label>
+                        <input type="number" min="1" placeholder="Residuos en kg" value={form.disposal_quantity}
                           onChange={(e) => setForm({ ...form, disposal_quantity: e.target.value })} />
                       </div>
                     </div>
                     <div className="form-group">
-                      <label style={{ fontSize: "13px", color: "#92400e" }}>Notes</label>
-                      <input type="text" placeholder="Any notes about the disposal..." value={form.disposal_notes}
+                      <label style={{ fontSize: "13px", color: "#92400e" }}>Observaciones</label>
+                      <input type="text" placeholder="Observaciones sobre la merma..." value={form.disposal_notes}
                         onChange={(e) => setForm({ ...form, disposal_notes: e.target.value })} />
                     </div>
                     {form.quantity && form.disposal_quantity && (
                       <div style={{ background: "#fff", borderRadius: "8px", padding: "10px 14px", border: "1px solid #fcd34d", fontSize: "13px" }}>
-                        <span style={{ color: "#6b7280" }}>Total tank deduction: </span>
+                        <span style={{ color: "#6b7280" }}>Deduccion total del deposito: </span>
                         <strong style={{ color: "#dc2626" }}>
                           {(parseInt(form.quantity || 0) + parseInt(form.disposal_quantity || 0)).toLocaleString()} kg
                         </strong>
                         <span style={{ color: "#9ca3af", marginLeft: "8px" }}>
-                          ({form.quantity} kg sold + {form.disposal_quantity} kg disposal)
+                          ({form.quantity} kg vendidos + {form.disposal_quantity} kg de merma)
                         </span>
                       </div>
                     )}
@@ -900,9 +894,9 @@ export default function Dispatches() {
               {formError && <p className="form-error">{typeof formError === "string" ? formError : "Validation error."}</p>}
 
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={closeModal}>Cancel</button>
+                <button type="button" className="btn-secondary" onClick={closeModal}>Cancelar</button>
                 <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? "Saving..." : editingDispatch ? "Save Changes" : "Create Dispatch"}
+                  {saving ? "Guardando..." : editingDispatch ? "Guardar Cambios" : "Crear Venta"}
                 </button>
               </div>
             </form>
@@ -930,12 +924,12 @@ export default function Dispatches() {
               {/* Dispatch info */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "20px" }}>
                 {[
-                  ["Customer", detailDispatch.customer?.name || "—"],
-                  ["Date", formatDate(detailDispatch.date)],
-                  ["Quantity", `${detailDispatch.quantity} kg`],
-                  ["Tank", detailDispatch.tank?.name || "—"],
-                  ["Post №", detailDispatch.post_number || "—"],
-                  ["GEI", detailDispatch.value_gei],
+                  ["Cliente",    detailDispatch.customer?.name || "—"],
+                  ["Fecha",      formatDate(detailDispatch.date)],
+                  ["Cantidad",   `${detailDispatch.quantity} kg`],
+                  ["Depósito",   detailDispatch.tank?.name || "—"],
+                  ["Post №",     detailDispatch.post_number || "—"],
+                  ["GEI",        detailDispatch.value_gei],
                 ].map(([label, value]) => (
                   <div key={label} style={{ background: "#f8fafc", borderRadius: "8px", padding: "10px 12px" }}>
                     <div style={{ fontSize: "11px", color: "#9ca3af", fontWeight: "600", textTransform: "uppercase", marginBottom: "4px" }}>{label}</div>
@@ -948,7 +942,7 @@ export default function Dispatches() {
               {detailDispatch.entrances?.length > 0 && (
                 <>
                   <p style={{ fontWeight: "600", fontSize: "13px", color: "#374151", marginBottom: "8px" }}>
-                    Entrance Batches ({detailDispatch.entrances.length})
+                    Lotes de Entrada ({detailDispatch.entrances.length})
                   </p>
                   <div style={{ border: "1.5px solid #e5e7eb", borderRadius: "8px", overflow: "hidden", marginBottom: "16px" }}>
                     {detailDispatch.entrances.map((en, idx) => (
@@ -968,11 +962,11 @@ export default function Dispatches() {
               {/* Disposal */}
               {detailDispatch.disposal && (
                 <div style={{ background: "#fffbeb", border: "1.5px solid #fcd34d", borderRadius: "10px", padding: "14px 16px", marginBottom: "20px" }}>
-                  <p style={{ fontWeight: "700", fontSize: "13px", color: "#92400e", margin: "0 0 10px" }}>Disposal</p>
+                  <p style={{ fontWeight: "700", fontSize: "13px", color: "#92400e", margin: "0 0 10px" }}>Merma</p>
                   <div style={{ display: "flex", gap: "16px", fontSize: "14px" }}>
-                    <span><strong>Date:</strong> {formatDate(detailDispatch.disposal.date)}</span>
-                    <span><strong>Quantity:</strong> {detailDispatch.disposal.quantity} kg</span>
-                    {detailDispatch.disposal.notes && <span><strong>Notes:</strong> {detailDispatch.disposal.notes}</span>}
+                    <span><strong>Fecha:</strong> {formatDate(detailDispatch.disposal.date)}</span>
+                    <span><strong>Cantidad:</strong> {detailDispatch.disposal.quantity} kg</span>
+                    {detailDispatch.disposal.notes && <span><strong>Observaciones:</strong> {detailDispatch.disposal.notes}</span>}
                   </div>
                 </div>
               )}
@@ -982,10 +976,10 @@ export default function Dispatches() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                   <div>
                     <p style={{ fontWeight: "700", fontSize: "15px", color: "#1a1a2e", margin: "0 0 2px" }}>
-                      📎 Compliance Documents
+                      📎 Documentos de Cumplimiento
                     </p>
                     <p style={{ fontSize: "12px", color: "#9ca3af", margin: 0 }}>
-                      {documents ? `${documents.uploaded_types?.length || 0} of 7 uploaded` : "Click to load documents"}
+                      {documents ? `${documents.uploaded_types?.length || 0} of 7 subidos` : "Haz click para cargar documentos"}
                     </p>
                   </div>
                   {!documents && (
@@ -999,7 +993,7 @@ export default function Dispatches() {
                         cursor: "pointer",
                       }}
                     >
-                      {docsLoading ? "Loading..." : "📂 Load Documents"}
+                      {docsLoading ? "Cargando..." : "📂 Cargar Documentos"}
                     </button>
                   )}
                 </div>
@@ -1032,7 +1026,7 @@ export default function Dispatches() {
                               <div>
                                 <p style={{ fontWeight: "600", fontSize: "14px", color: "#1a1a2e", margin: 0 }}>{label}</p>
                                 <p style={{ fontSize: "11px", color: hasFiles ? "#15803d" : "#9ca3af", margin: 0, fontWeight: "600" }}>
-                                  {hasFiles ? `${files.length} file${files.length > 1 ? "s" : ""} uploaded` : "No files uploaded"}
+                                  {hasFiles ? `${files.length} file${files.length > 1 ? "s" : ""} Subido` : "Sin archivos subidos"}
                                 </p>
                               </div>
                             </div>
@@ -1053,10 +1047,10 @@ export default function Dispatches() {
                               {uploading[key] ? (
                                 <>
                                   <span style={{ width:"10px",height:"10px",border:"2px solid #7dd3fc",borderTopColor:"#0369a1",borderRadius:"50%",display:"inline-block",animation:"spin 0.7s linear infinite" }}/>
-                                  Uploading...
+                                  Subiendo...
                                 </>
                               ) : (
-                                <>⬆ Upload</>
+                                <>⬆ Subir</>
                               )}
                               <input
                                 type="file"
@@ -1100,7 +1094,7 @@ export default function Dispatches() {
                                     </p>
                                     <p style={{ fontSize: "11px", color: "#9ca3af", margin: 0 }}>
                                       {formatFileSize(file.file_size)}
-                                      {file.uploaded_at && ` · ${new Date(file.uploaded_at).toLocaleDateString("en-GB")}`}
+                                      {file.uploaded_at && ` · ${new Date(file.uploaded_at).toLocaleDateString("es-ES")}`}
                                     </p>
                                   </div>
 
@@ -1149,31 +1143,34 @@ export default function Dispatches() {
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Delete Dispatch</h2>
+              <h2>Eliminar venta</h2>
               <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
             </div>
             <p className="confirm-text">
-              Are you sure you want to delete dispatch <strong>{deleteTarget.batch_id}</strong>?
+              ¿Estás seguro de que quieres eliminar la salida <strong>{deleteTarget.batch_id}</strong>?
             </p>
             <div style={{ margin: "0 24px 16px", background: "#fef2f2", border: "1.5px solid #fecaca", borderRadius: "10px", padding: "14px 16px" }}>
-              <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>⚠ Traceability Warning</p>
+            <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>⚠ Aviso de Trazabilidad</p>
               <ul style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, paddingLeft: "18px", lineHeight: 1.8 }}>
-                <li><strong>{deleteTarget.quantity} kg</strong> sold will be restored to tank stock</li>
+                <li><strong>{deleteTarget.quantity} kg</strong> vendidos serán restaurados al stock del depósito</li>
                 {deleteTarget.disposal && (
-                  <li>Disposal record of <strong>{deleteTarget.disposal.quantity} kg</strong> will also be deleted</li>
+                  <li>El registro de merma de <strong>{deleteTarget.disposal.quantity} kg</strong> también será eliminado</li>
                 )}
-                {deleteTarget.entrances?.length > 0 && (
-                  <li><strong>{deleteTarget.entrances.length} entrance batch{deleteTarget.entrances.length !== 1 ? "es" : ""}</strong> will be unlinked</li>
+                {(deleteTarget.entrances?.length ?? 0) > 0 && (
+                  <li><strong>{deleteTarget.entrances.length} lote{deleteTarget.entrances.length !== 1 ? "s" : ""} de entrada</strong> serán desvinculados</li>
                 )}
-                {deleteTarget.documents_count > 0 && (
-                    <li><strong>{deleteTarget.documents_count} uploaded document{deleteTarget.documents_count !== 1 ? "s" : ""}</strong> will be permanently deleted from the server</li>
+                {(deleteTarget.documents_count ?? 0) > 0 && (
+                  <li><strong>{deleteTarget.documents_count} documento{deleteTarget.documents_count !== 1 ? "s" : ""} subido{deleteTarget.documents_count !== 1 ? "s" : ""}</strong> serán eliminados permanentemente del servidor</li>
                 )}
-                <li>ISCC traceability record for post number <strong>{deleteTarget.post_number || "N/A"}</strong> will be permanently lost</li>
+                {deleteTarget.documents_count === undefined && (
+                  <li style={{ color: "#92400e" }}>Los documentos subidos para esta salida también serán eliminados permanentemente</li>
+                )}
+                <li>El registro de trazabilidad ISCC para el número de post <strong>{deleteTarget.post_number || "N/A"}</strong> se perderá permanentemente</li>
               </ul>
             </div>
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button className="btn-danger" onClick={confirmDelete}>Delete anyway</button>
+              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmDelete}>Eliminar de todas formas</button>
             </div>
           </div>
         </div>
