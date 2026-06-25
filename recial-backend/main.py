@@ -13,6 +13,9 @@ print(">>> DATABASE_URL =", os.getenv("DATABASE_URL", "NOT SET"))
 # Create all tables on startup
 Base.metadata.create_all(bind=engine)
 
+from seed_users import seed_users
+seed_users()
+
 app = FastAPI(
     title="Recial API",
     description="Backend API for the Recial used vegetable oil recycling app",
