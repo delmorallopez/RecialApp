@@ -88,7 +88,7 @@ export default function Suppliers() {
       setSuppliers(res.data.suppliers);
       setTotal(res.data.total);
     } catch {
-      setError("Could not load suppliers. Is the backend running?");
+      setError("No se pudieron cargar los proveedores. ¿Está el servidor en ejecución?");
     } finally {
       setLoading(false);
     }
@@ -107,7 +107,7 @@ export default function Suppliers() {
       const res = await getPickupPoints({ supplier_id: supplierId });
       setPickupPoints(res.data.pickup_points);
     } catch {
-      setPickupError("Could not load pickup points.");
+      setPickupError("No se pudieron cargar los puntos de recogida.");
     } finally {
       setPickupLoading(false);
     }
@@ -157,7 +157,7 @@ export default function Suppliers() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim()) { setFormError("Supplier name is required."); return; }
+    if (!form.name.trim()) { setFormError("El nombre del proveedor es obligatorio."); return; }
     setSaving(true);
     setFormError(null);
     try {
@@ -171,7 +171,7 @@ export default function Suppliers() {
       }
       fetchSuppliers();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Something went wrong.");
+      setFormError(err.response?.data?.detail || "Ha ocurrido un error.");
     } finally {
       setSaving(false);
     }
@@ -179,10 +179,10 @@ export default function Suppliers() {
 
   // ── Pickup point CRUD ────────────────────────────────────
   const handleAddPickup = async () => {
-    if (!newPickup.name.trim()) { setPickupError("Name is required."); return; }
-    if (!editingSupplier) { setPickupError("Save the supplier first."); return; }
-    if (!isValidLat(newPickup.latitude)) { setPickupError("Latitude must be between -90 and 90."); return; }
-    if (!isValidLng(newPickup.longitude)) { setPickupError("Longitude must be between -180 and 180."); return; }
+    if (!newPickup.name.trim()) { setPickupError("El nombre es obligatorio."); return; }
+    if (!editingSupplier) { setPickupError("Guarda primero el proveedor."); return; }
+    if (!isValidLat(newPickup.latitude)) { setPickupError("La latitud debe estar entre -90 y 90."); return; }
+    if (!isValidLng(newPickup.longitude)) { setPickupError("La longitud debe estar entre -180 y 180."); return; }
 
     setPickupError(null);
     setAddingPickup(true);
@@ -197,16 +197,16 @@ export default function Suppliers() {
       setNewPickup(EMPTY_PICKUP);
       loadPickupPoints(editingSupplier.id);
     } catch (err) {
-      setPickupError(err.response?.data?.detail || "Could not add pickup point.");
+      setPickupError(err.response?.data?.detail || "No se pudo añadir el punto de recogida.");
     } finally {
       setAddingPickup(false);
     }
   };
 
   const handleUpdatePickup = async (id) => {
-    if (!editingPickup?.name?.trim()) { setPickupError("Name is required."); return; }
-    if (!isValidLat(editingPickup.latitude)) { setPickupError("Latitude must be between -90 and 90."); return; }
-    if (!isValidLng(editingPickup.longitude)) { setPickupError("Longitude must be between -180 and 180."); return; }
+    if (!editingPickup?.name?.trim()) { setPickupError("El nombre es obligatorio."); return; }
+    if (!isValidLat(editingPickup.latitude)) { setPickupError("La latitud debe estar entre -90 y 90."); return; }
+    if (!isValidLng(editingPickup.longitude)) { setPickupError("La longitud debe estar entre -180 y 180."); return; }
 
     setPickupError(null);
     try {
@@ -219,7 +219,7 @@ export default function Suppliers() {
       setEditingPickup(null);
       loadPickupPoints(editingSupplier.id);
     } catch (err) {
-      setPickupError(err.response?.data?.detail || "Could not update.");
+      setPickupError(err.response?.data?.detail || "No se pudo actualizar.");
     }
   };
 
@@ -229,7 +229,7 @@ export default function Suppliers() {
       await deletePickupPoint(id);
       loadPickupPoints(editingSupplier.id);
     } catch (err) {
-      setPickupError(err.response?.data?.detail || "Could not delete.");
+      setPickupError(err.response?.data?.detail || "No se pudo eliminar.");
     }
   };
 
@@ -252,7 +252,7 @@ export default function Suppliers() {
       setDeleteTarget(null);
       fetchSuppliers();
     } catch (err) {
-      setError(err.response?.data?.detail || "Could not delete supplier.");
+      setError(err.response?.data?.detail || "No se pudo eliminar el proveedor.");
       setDeleteTarget(null);
     }
   };
@@ -264,7 +264,7 @@ export default function Suppliers() {
       color: type === "Horeca" ? "#1d4ed8" : "#15803d",
       padding: "3px 10px", borderRadius: "999px",
       fontSize: "12px", fontWeight: "600",
-    }}>{type}</span>
+    }}>{type === "Urban" ? "Urbano" : type}</span>
   );
 
   // ── Coordinate input group ───────────────────────────────
@@ -281,9 +281,9 @@ export default function Suppliers() {
           alignItems: "center", marginBottom: "8px",
         }}>
           <span style={{ fontSize: "13px", fontWeight: "600", color: "#374151" }}>
-            📍 Coordinates
+            📍 Coordenadas
             <span style={{ fontSize: "11px", color: "#9ca3af", fontWeight: "400", marginLeft: "6px" }}>
-              optional
+              opcional
             </span>
           </span>
           <a
@@ -296,7 +296,7 @@ export default function Suppliers() {
               padding: "4px 10px", borderRadius: "6px", background: "#eff6ff",
             }}
           >
-            Find on Maps ↗
+            Buscar en Maps ↗
           </a>
         </div>
 
@@ -306,22 +306,22 @@ export default function Suppliers() {
           borderRadius: "8px", padding: "8px 12px", marginBottom: "10px",
           fontSize: "12px", color: "#6b7280", lineHeight: "1.6",
         }}>
-          1. Click <strong>Find on Maps ↗</strong> above &nbsp;·&nbsp;
-          2. Right-click the exact location on the map &nbsp;·&nbsp;
-          3. Copy the coordinates shown &nbsp;·&nbsp;
-          4. Paste below
+          1. Haz clic en <strong>Buscar en Maps ↗</strong> arriba &nbsp;·&nbsp;
+          2. Haz clic derecho en la ubicación exacta del mapa &nbsp;·&nbsp;
+          3. Copia las coordenadas mostradas &nbsp;·&nbsp;
+          4. Pégalas abajo
         </div>
 
         {/* Lat / Lng inputs */}
         <div style={{ display: "flex", gap: "10px" }}>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#374151", display: "block", marginBottom: "4px" }}>
-              Latitude
+              Latitud
             </label>
             <input
               type="number"
               step="any"
-              placeholder="e.g. 41.3851"
+              placeholder="ej. 41.3851"
               value={values.latitude || ""}
               onChange={(e) => onChange({ ...values, latitude: e.target.value })}
               style={{
@@ -333,13 +333,15 @@ export default function Suppliers() {
             />
             {!latOk && (
               <p style={{ fontSize: "11px", color: "#dc2626", margin: "3px 0 0" }}>
-                Must be between -90 and 90
+                <p style={{ fontSize: "11px", color: "#dc2626", margin: "3px 0 0" }}>
+                  Debe estar entre -90 y 90
+                </p>
               </p>
             )}
           </div>
           <div style={{ flex: 1 }}>
             <label style={{ fontSize: "12px", fontWeight: "600", color: "#374151", display: "block", marginBottom: "4px" }}>
-              Longitude
+              Longitud
             </label>
             <input
               type="number"
@@ -356,7 +358,9 @@ export default function Suppliers() {
             />
             {!lngOk && (
               <p style={{ fontSize: "11px", color: "#dc2626", margin: "3px 0 0" }}>
-                Must be between -180 and 180
+                <p style={{ fontSize: "11px", color: "#dc2626", margin: "3px 0 0" }}>
+                  Debe estar entre -180 y 180
+                </p>
               </p>
             )}
           </div>
@@ -376,7 +380,7 @@ export default function Suppliers() {
               background: "#f0fdf4", border: "1px solid #86efac",
             }}
           >
-            ✓ View location on Maps ↗
+            ✓ Ver ubicación en Maps ↗
           </a>
         )}
       </div>
@@ -390,12 +394,12 @@ export default function Suppliers() {
       {/* Header */}
       <div className="customers-header">
         <div>
-          <h1 className="customers-title">Suppliers</h1>
-          <p className="customers-subtitle">
-            {total} registered supplier{total !== 1 ? "s" : ""}
-          </p>
+        <h1 className="customers-title">Proveedores</h1>
+        <p className="customers-subtitle">
+          {total} proveedor{total !== 1 ? "es" : ""} registrado{total !== 1 ? "s" : ""}
+        </p>
         </div>
-        <button className="btn-primary" onClick={openAdd}>+ New Supplier</button>
+        <button className="btn-primary" onClick={openAdd}>+ Nuevo Proveedor</button>
       </div>
 
       {/* Toolbar */}
@@ -403,9 +407,8 @@ export default function Suppliers() {
         <div className="search-wrapper">
           <span className="search-icon">⌕</span>
           <input className="search-input" type="text"
-            placeholder="Search by name, CIF or address..."
+            placeholder="Buscar por nombre, CIF o dirección..."
             value={search} onChange={(e) => setSearch(e.target.value)} />
-          {search && <button className="search-clear" onClick={() => setSearch("")}>✕</button>}
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           {["", ...SUPPLIER_TYPES].map((t) => (
@@ -415,7 +418,7 @@ export default function Suppliers() {
               background: typeFilter === t ? "#2d7a4f" : "#fff",
               color: typeFilter === t ? "#fff" : "#374151",
               fontWeight: "600", fontSize: "13px", cursor: "pointer",
-            }}>{t || "All"}</button>
+            }}>{t === "" ? "Todos" : t === "Urban" ? "Urbano" : t}</button>
           ))}
         </div>
       </div>
@@ -427,16 +430,16 @@ export default function Suppliers() {
         <table className="customers-table">
           <thead>
             <tr>
-              <th>ID</th><th>Type</th><th>Name</th>
-              <th>CIF</th><th>Address</th><th>Pickup Points</th><th>Actions</th>
+            <th>ID</th><th>Tipo</th><th>Nombre</th>
+            <th>CIF</th><th>Dirección</th><th>Puntos de Recogida</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="table-state">Loading...</td></tr>
+              <tr><td colSpan={7} className="table-state">Cargando...</td></tr>
             ) : suppliers.length === 0 ? (
               <tr><td colSpan={7} className="table-state">
-                {search ? "No suppliers match your search." : "No suppliers yet. Add your first one!"}
+                {search ? "Ningún proveedor coincide con tu búsqueda." : "No hay proveedores todavía. ¡Añade el primero!"}
               </td></tr>
             ) : (
               suppliers.map((s) => (
@@ -455,11 +458,11 @@ export default function Suppliers() {
                       fontSize: "13px", fontWeight: "600",
                       color: s.supplier_type === "Urban" ? "#15803d" : "#6b7280",
                       cursor: "pointer",
-                    }}>📍 View points</button>
+                    }}>📍 Ver Puntos</button>
                   </td>
                   <td className="td-actions">
-                    <button className="btn-edit" onClick={() => openEdit(s)}>Edit</button>
-                    <button className="btn-delete" onClick={() => setDeleteTarget(s)}>Delete</button>
+                    <button className="btn-edit" onClick={() => openEdit(s)}>Editar</button>
+                    <button className="btn-delete" onClick={() => setDeleteTarget(s)}>Eliminar</button>
                   </td>
                 </tr>
               ))
@@ -493,10 +496,10 @@ export default function Suppliers() {
                 }}>
                   <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
                   <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
-                    Discard changes?
+                    ¿Descartar cambios?
                   </p>
                   <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
-                    You have unsaved data. If you close now it will be lost.
+                    Tienes datos sin guardar. Si cierras ahora se perderán.
                   </p>
                   <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                     <button
@@ -507,7 +510,7 @@ export default function Suppliers() {
                         color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      Keep editing
+                      Seguir Editando
                     </button>
                     <button
                       onClick={() => { setConfirmClose(false); closeModal(); }}
@@ -517,21 +520,21 @@ export default function Suppliers() {
                         color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      Discard
+                      Descartar
                     </button>
                   </div>
                 </div>
               </div>
             )}
             <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
-              <h2>{editingSupplier ? "Edit Supplier" : "New Supplier"}</h2>
+              <h2>{editingSupplier ? "Editar Proveedor" : "Nuevo Proveedor"}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
 
             <form className="modal-form" onSubmit={handleSubmit}>
               {/* Type */}
               <div className="form-group">
-                <label>Supplier Type <span className="required">*</span></label>
+                <label>Tipo de Proveedor <span className="required">*</span></label>
                 <div style={{ display: "flex", gap: "10px" }}>
                   {SUPPLIER_TYPES.map((t) => (
                     <button key={t} type="button"
@@ -542,7 +545,7 @@ export default function Suppliers() {
                         background: form.supplier_type === t ? "#f0fdf4" : "#fff",
                         color: form.supplier_type === t ? "#15803d" : "#374151",
                         fontWeight: "600", fontSize: "14px", cursor: "pointer",
-                      }}>{t}</button>
+                      }}>{t === "Urban" ? "Urbano" : t}</button>
                   ))}
                 </div>
               </div>
@@ -550,8 +553,8 @@ export default function Suppliers() {
               {/* Name + CIF */}
               <div className="form-row">
                 <div className="form-group form-group--grow">
-                  <label>Supplier Name <span className="required">*</span></label>
-                  <input type="text" placeholder="Company or restaurant name"
+                  <label>Nombre del Proveedor<span className="required">*</span></label>
+                  <input type="text" placeholder="Nombre de la empresa o Restaurante"
                     value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div className="form-group">
@@ -563,17 +566,17 @@ export default function Suppliers() {
 
               {/* Address */}
               <div className="form-group">
-                <label>Address</label>
-                <input type="text" placeholder="Street, number, city..."
+                <label>Direccion</label>
+                <input type="text" placeholder="Calle, Numero, Ciudad.."
                   value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
               </div>
 
               {formError && <p className="form-error">{formError}</p>}
 
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={closeModal}>Cancel</button>
+                <button type="button" className="btn-secondary" onClick={closeModal}>Cancelar</button>
                 <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? "Saving..." : editingSupplier ? "Save Changes" : "Create & Add Pickup Points →"}
+                  {saving ? "Guardando..." : editingSupplier ? "Guardar Cambios" : "Crear y Añadir Puntos de Recogida →"}
                 </button>
               </div>
             </form>
@@ -589,13 +592,13 @@ export default function Suppliers() {
                   padding: "14px 18px",
                 }}>
                   <p style={{ fontWeight: "700", fontSize: "15px", color: "#1a1a2e", margin: "0 0 2px" }}>
-                    📍 Pickup Points
+                    📍 Puntos de Recogida
                   </p>
                   <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
-                    {pickupPoints.length} point{pickupPoints.length !== 1 ? "s" : ""} registered
+                    {pickupPoints.length} punto{pickupPoints.length !== 1 ? "s" : ""} registrado{pickupPoints.length !== 1 ? "s" : ""}
                     {pickupPoints.filter((p) => hasCoords(p)).length > 0 && (
                       <span style={{ color: "#15803d", marginLeft: "6px" }}>
-                        · {pickupPoints.filter((p) => hasCoords(p)).length} with coordinates
+                        · {pickupPoints.filter((p) => hasCoords(p)).length} con coordenadas
                       </span>
                     )}
                   </p>
@@ -604,10 +607,10 @@ export default function Suppliers() {
                 {/* List */}
                 <div style={{ background: "#fff" }}>
                   {pickupLoading ? (
-                    <p style={{ padding: "16px", color: "#9ca3af", fontSize: "14px", textAlign: "center" }}>Loading...</p>
+                    <p style={{ padding: "16px", color: "#9ca3af", fontSize: "14px", textAlign: "center" }}>Cargando...</p>
                   ) : pickupPoints.length === 0 ? (
                     <p style={{ padding: "20px", color: "#9ca3af", fontSize: "14px", textAlign: "center" }}>
-                      No pickup points yet — add one below.
+                       No hay puntos de recogida todavía — añade uno abajo.
                     </p>
                   ) : (
                     pickupPoints.map((p, idx) => (
@@ -622,11 +625,11 @@ export default function Suppliers() {
                             <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
                               <input type="text" value={editingPickup.name}
                                 onChange={(e) => setEditingPickup({ ...editingPickup, name: e.target.value })}
-                                placeholder="Point name"
+                                placeholder="Nombre del Punto"
                                 style={{ flex: 1, padding: "7px 10px", border: "1.5px solid #2d7a4f", borderRadius: "7px", fontSize: "14px" }} />
                               <input type="text" value={editingPickup.address || ""}
                                 onChange={(e) => setEditingPickup({ ...editingPickup, address: e.target.value })}
-                                placeholder="Address (optional)"
+                                placeholder="Direccion (optional)"
                                 style={{ flex: 2, padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: "7px", fontSize: "14px" }} />
                             </div>
                             <CoordInputs
@@ -638,11 +641,11 @@ export default function Suppliers() {
                               <button type="button" onClick={() => handleUpdatePickup(p.id)} style={{
                                 background: "#2d7a4f", color: "#fff", border: "none",
                                 borderRadius: "6px", padding: "7px 16px", fontSize: "13px", fontWeight: "600", cursor: "pointer",
-                              }}>Save</button>
+                              }}>Guardar</button>
                               <button type="button" onClick={() => setEditingPickup(null)} style={{
                                 background: "#f3f4f6", color: "#374151", border: "none",
                                 borderRadius: "6px", padding: "7px 12px", fontSize: "13px", cursor: "pointer",
-                              }}>Cancel</button>
+                              }}>Cancelar</button>
                             </div>
                           </div>
                         ) : (
@@ -670,12 +673,12 @@ export default function Suppliers() {
                                   <a href={mapsPreviewUrl(p.latitude, p.longitude)}
                                     target="_blank" rel="noreferrer"
                                     style={{ fontSize: "11px", color: "#1d4ed8", textDecoration: "none", fontWeight: "600" }}>
-                                    View ↗
+                                    Ver ↗
                                   </a>
                                 </div>
                               ) : (
                                 <span style={{ fontSize: "11px", color: "#f59e0b", fontWeight: "500" }}>
-                                  ⚠ No coordinates
+                                  ⚠ Sin Coordenas
                                 </span>
                               )}
                             </div>
@@ -688,11 +691,11 @@ export default function Suppliers() {
                                   longitude: p.longitude ?? "",
                                 })}
                                 style={{ background: "#eff6ff", color: "#1d4ed8", border: "none", borderRadius: "6px", padding: "6px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
-                                Edit
+                                Editar
                               </button>
                               <button type="button" onClick={() => handleDeletePickup(p.id)}
                                 style={{ background: "#fef2f2", color: "#dc2626", border: "none", borderRadius: "6px", padding: "6px 12px", fontSize: "12px", fontWeight: "600", cursor: "pointer" }}>
-                                Delete
+                                Eliminar
                               </button>
                             </div>
                           </div>
@@ -705,17 +708,17 @@ export default function Suppliers() {
                 {/* ── Add new pickup point ── */}
                 <div style={{ background: "#f8fafc", borderTop: "1.5px solid #e5e7eb", padding: "16px 18px" }}>
                   <p style={{ fontSize: "13px", fontWeight: "700", color: "#374151", margin: "0 0 10px" }}>
-                    + Add Pickup Point
+                     + Añadir Punto de Recogida
                   </p>
                   <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
                     <input type="text"
-                      placeholder="Name (e.g. Container A, Plaza Mayor...)"
+                      placeholder="Nombre (ej. Contenedor A, Plaza Mayor...)"
                       value={newPickup.name}
                       onChange={(e) => setNewPickup({ ...newPickup, name: e.target.value })}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddPickup())}
                       style={{ flex: 1, padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: "8px", fontSize: "14px" }} />
                     <input type="text"
-                      placeholder="Address (optional)"
+                      placeholder="Direccion (optional)"
                       value={newPickup.address}
                       onChange={(e) => setNewPickup({ ...newPickup, address: e.target.value })}
                       style={{ flex: 2, padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: "8px", fontSize: "14px" }} />
@@ -734,7 +737,7 @@ export default function Suppliers() {
                       borderRadius: "8px", padding: "10px 20px",
                       fontSize: "14px", fontWeight: "600", cursor: "pointer",
                     }}>
-                    {addingPickup ? "Adding..." : "Add Pickup Point"}
+                    {addingPickup ? "Añadiendo..." : "Añadir Punto de Recogida"}
                   </button>
 
                   {pickupError && (
@@ -748,7 +751,7 @@ export default function Suppliers() {
 
             {!editingSupplier && (
               <p style={{ padding: "0 24px 20px", fontSize: "13px", color: "#9ca3af", textAlign: "center" }}>
-                After creating the supplier you can add pickup points with coordinates.
+                Despues de crear el proveedor tu puedes añadir los puntos de recogidas con las coordenadas
               </p>
             )}
           </div>
@@ -771,7 +774,7 @@ export default function Suppliers() {
             <div style={{ padding: "8px 0 16px" }}>
               {pickupListPoints.length === 0 ? (
                 <p style={{ textAlign: "center", color: "#9ca3af", fontSize: "14px", padding: "24px" }}>
-                  No pickup points registered yet.
+                  No hay puntos de recogida registrados todavía.
                 </p>
               ) : (
                 pickupListPoints.map((p, idx) => (
@@ -801,11 +804,11 @@ export default function Suppliers() {
                             <a href={mapsPreviewUrl(p.latitude, p.longitude)}
                               target="_blank" rel="noreferrer"
                               style={{ fontSize: "11px", color: "#1d4ed8", textDecoration: "none", fontWeight: "600" }}>
-                              View ↗
+                              Ver ↗
                             </a>
                           </div>
                         ) : (
-                          <span style={{ fontSize: "11px", color: "#f59e0b", fontWeight: "500" }}>⚠ No coordinates</span>
+                          <span style={{ fontSize: "11px", color: "#f59e0b", fontWeight: "500" }}>⚠ Sin  Coordenadas</span>
                         )}
                       </div>
                     </div>
@@ -815,7 +818,7 @@ export default function Suppliers() {
               <div style={{ padding: "16px 24px 0", display: "flex", justifyContent: "flex-end" }}>
                 <button className="btn-primary"
                   onClick={() => { setPickupListTarget(null); openEdit(pickupListTarget); }}>
-                  Manage Pickup Points
+                   Gestionar Puntos de Recogida
                 </button>
               </div>
             </div>
@@ -828,27 +831,27 @@ export default function Suppliers() {
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Delete Supplier</h2>
+              <h2>Eliminar Proveedor</h2>
               <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
             </div>
             <p className="confirm-text">
-              Are you sure you want to delete <strong>{deleteTarget.name}</strong>?
+              ¿Estás seguro de que quieres eliminar a <strong>{deleteTarget.name}</strong>?
             </p>
             <div style={{
               margin: "0 24px 16px", background: "#fef2f2",
               border: "1.5px solid #fecaca", borderRadius: "10px", padding: "14px 16px",
             }}>
               <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>
-                ⚠ Traceability Warning
+                ⚠ Aviso de Trazabilidad
               </p>
               <ul style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, paddingLeft: "18px", lineHeight: 1.8 }}>
-                <li>All <strong>pickup points</strong> and their coordinates will be deleted</li>
-                <li>All <strong>receipts</strong> linked to this supplier will lose their reference</li>
+                <li>Todos los <strong>puntos de recogida</strong> y sus coordenadas serán eliminados</li>
+                <li>Todos los <strong>albaranes</strong> vinculados a este proveedor perderán su referencia</li>
               </ul>
             </div>
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button className="btn-danger" onClick={confirmDelete}>Delete anyway</button>
+              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmDelete}>Eliminar de todas formas</button>
             </div>
           </div>
         </div>

@@ -58,7 +58,7 @@ export default function Receipts() {
   useEffect(() => {
     getSuppliers({ limit: 200 })
       .then((res) => setSuppliers(res.data.suppliers))
-      .catch(() => setError("Could not load suppliers list."));
+      .catch(() => setError("No se pudo cargar la lista de proveedores."));
   }, []);
 
   // ── Fetch receipts ───────────────────────────────────────
@@ -74,7 +74,7 @@ export default function Receipts() {
       setReceipts(res.data.receipts);
       setTotal(res.data.total);
     } catch {
-      setError("Could not load receipts. Is the backend running?");
+      setError("No se pueden cargar las recogidas. ¿Está el servidor en ejecución?");
     } finally {
       setLoading(false);
     }
@@ -211,8 +211,8 @@ export default function Receipts() {
   // ── Submit ───────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.supplier_id) { setFormError("Please select a supplier."); return; }
-    if (!form.date) { setFormError("Date is required."); return; }
+    if (!form.supplier_id) { setFormError("Por favor, selecciona un proveedor."); return; }
+    if (!form.date) { setFormError("La fecha es obligatoria."); return; }
 
     let finalQuantity;
     let pickupPayload = [];
@@ -227,14 +227,14 @@ export default function Receipts() {
         }));
 
       if (pickupPayload.length === 0) {
-        setFormError("Enter at least one pickup point quantity greater than 0.");
+        setFormError("Introduce al menos una cantidad mayor que 0 en un punto de recogida.");
         return;
       }
       // Total is calculated by the backend from pickup quantities
       finalQuantity = pickupTotal;
     } else {
       if (!form.quantity_kg || parseFloat(form.quantity_kg) <= 0) {
-        setFormError("Quantity must be greater than 0.");
+        setFormError("La cantidad debe ser mayor que 0.");
         return;
       }
       finalQuantity = parseFloat(form.quantity_kg);
@@ -265,7 +265,7 @@ export default function Receipts() {
       setFormError(
         typeof detail === "string"
           ? detail
-          : "Something went wrong. Please try again."
+          : "Ha ocurrido un error. Por favor, inténtalo de nuevo."
       );
     } finally {
       setSaving(false);
@@ -280,7 +280,7 @@ export default function Receipts() {
       setDeleteTarget(null);
       fetchReceipts();
     } catch {
-      setError("Could not delete receipt.");
+      setError("No se pudo eliminar la recogida.");
       setDeleteTarget(null);
     }
   };
@@ -293,7 +293,7 @@ export default function Receipts() {
   };
 
   const supplierName = (receipt) =>
-    receipt.supplier?.name || `Supplier #${receipt.supplier_id}`;
+    receipt.supplier?.name || `Proveedor #${receipt.supplier_id}`;
 
   const totalKg = receipts.reduce((s, r) => s + (r.quantity_kg || 0), 0);
 
@@ -316,29 +316,29 @@ export default function Receipts() {
       {/* Header */}
       <div className="customers-header">
         <div>
-          <h1 className="customers-title">Receipts</h1>
-          <p className="customers-subtitle">
-            {total} receipt{total !== 1 ? "s" : ""} —{" "}
-            <strong>{totalKg.toFixed(1)} kg</strong> UCO collected
-          </p>
+        <h1 className="customers-title">Recogidas</h1>
+        <p className="customers-subtitle">
+          {total} recogida{total !== 1 ? "s" : ""} —{" "}
+          <strong>{totalKg.toFixed(1)} kg</strong> UCO recogidos
+        </p>
         </div>
-        <button className="btn-primary" onClick={openAdd}>+ New Receipt</button>
+        <button className="btn-primary" onClick={openAdd}>+ Nueva recogida</button>
       </div>
 
       {/* Filters */}
       <div className="customers-toolbar" style={{ display: "flex", gap: "12px", alignItems: "center", flexWrap: "wrap" }}>
         <select value={supplierFilter} onChange={(e) => setSupplierFilter(e.target.value)}
           style={{ padding: "9px 12px", border: "1.5px solid #e5e7eb", borderRadius: "8px", fontSize: "14px", color: "#374151", background: "#fff", cursor: "pointer" }}>
-          <option value="">All Suppliers</option>
+          <option value="">Todos los Proveedores</option>
           {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <label style={{ fontSize: "13px", color: "#6b7280", fontWeight: "500" }}>From</label>
+          <label style={{ fontSize: "13px", color: "#6b7280", fontWeight: "500" }}>Desde</label>
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
             style={{ padding: "8px 10px", border: "1.5px solid #e5e7eb", borderRadius: "8px", fontSize: "14px" }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <label style={{ fontSize: "13px", color: "#6b7280", fontWeight: "500" }}>To</label>
+          <label style={{ fontSize: "13px", color: "#6b7280", fontWeight: "500" }}>Hasta</label>
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
             style={{ padding: "8px 10px", border: "1.5px solid #e5e7eb", borderRadius: "8px", fontSize: "14px" }} />
         </div>
@@ -346,7 +346,7 @@ export default function Receipts() {
           <button className="btn-secondary"
             onClick={() => { setSupplierFilter(""); setDateFrom(""); setDateTo(""); }}
             style={{ padding: "8px 14px", fontSize: "13px" }}>
-            Clear filters
+            Limpiar filtros
           </button>
         )}
       </div>
@@ -358,22 +358,22 @@ export default function Receipts() {
         <table className="customers-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Code</th>
-              <th>Date</th>
-              <th>Supplier</th>
-              <th>Raw Material</th>
-              <th>Quantity (kg)</th>
-              <th>Pickup Breakdown</th>
-              <th>Notes</th>
-              <th>Actions</th>
+            <th>ID</th>
+            <th>Código</th>
+            <th>Fecha</th>
+            <th>Proveedor</th>
+            <th>Materia Prima</th>
+            <th>Cantidad (kg)</th>
+            <th>Desglose Recogida</th>
+            <th>Observaciones</th>
+            <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} className="table-state">Loading...</td></tr>
+              <tr><td colSpan={9} className="table-state">Cargando...</td></tr>
             ) : receipts.length === 0 ? (
-              <tr><td colSpan={9} className="table-state">No receipts found. Add your first collection!</td></tr>
+              <tr><td colSpan={9} className="table-state">No se encontraron recogidas. ¡Añade tu primera recogida!</td></tr>
             ) : (
               receipts.map((r) => (
                 <tr key={r.id} className="table-row">
@@ -400,8 +400,8 @@ export default function Receipts() {
                     {r.notes || "—"}
                   </td>
                   <td className="td-actions">
-                    <button className="btn-edit" onClick={() => openEdit(r)}>Edit</button>
-                    <button className="btn-delete" onClick={() => setDeleteTarget(r)}>Delete</button>
+                    <button className="btn-edit" onClick={() => openEdit(r)}>Editar</button>
+                    <button className="btn-delete" onClick={() => setDeleteTarget(r)}>Eliminar</button>
                   </td>
                 </tr>
               ))
@@ -411,7 +411,7 @@ export default function Receipts() {
             <tfoot>
               <tr style={{ background: "#f8fafc", borderTop: "2px solid #e5e7eb" }}>
                 <td colSpan={5} style={{ padding: "12px 16px", fontWeight: "600", color: "#6b7280", fontSize: "13px" }}>
-                  TOTAL ({receipts.length} receipts)
+                  TOTAL ({receipts.length} recogidas)
                 </td>
                 <td style={{ padding: "12px 16px", fontWeight: "800", color: "#2d7a4f", fontSize: "15px" }}>
                   {totalKg.toFixed(1)} kg
@@ -446,10 +446,10 @@ export default function Receipts() {
                 }}>
                   <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
                   <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
-                    Discard changes?
+                    ¿Descartar cambios?
                   </p>
                   <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
-                    You have unsaved data. If you close now it will be lost.
+                    Tienes datos sin guardar. Si cierras ahora se perderán.
                   </p>
                   <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                     <button
@@ -460,7 +460,7 @@ export default function Receipts() {
                         color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      Keep editing
+                      Seguir Editando
                     </button>
                     <button
                       onClick={() => { setConfirmClose(false); closeModal(); }}
@@ -470,14 +470,14 @@ export default function Receipts() {
                         color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      Discard
+                      Descartar
                     </button>
                   </div>
                 </div>
               </div>
             )}
             <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
-              <h2>{editingReceipt ? "Edit Receipt" : "New Receipt"}</h2>
+              <h2>{editingReceipt ? "Editar Recogida" : "Nueva Recogida"}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
 
@@ -485,11 +485,11 @@ export default function Receipts() {
 
               {/* Supplier */}
               <div className="form-group">
-                <label>Supplier <span className="required">*</span></label>
+                <label>Proveedor <span className="required">*</span></label>
                 <select value={form.supplier_id}
                   onChange={(e) => handleSupplierChange(e.target.value)}
                   style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
-                  <option value="">Select a supplier...</option>
+                  <option value="">Seleccionar un proveedor...</option>
                   {suppliers.map((s) => (
                     <option key={s.id} value={s.id}>{s.name} ({s.supplier_type})</option>
                   ))}
@@ -499,12 +499,12 @@ export default function Receipts() {
               {/* Date + Raw material */}
               <div className="form-row">
                 <div className="form-group form-group--grow">
-                  <label>Date <span className="required">*</span></label>
+                  <label>Fecha <span className="required">*</span></label>
                   <input type="date" value={form.date}
                     onChange={(e) => setForm({ ...form, date: e.target.value })} />
                 </div>
                 <div className="form-group">
-                  <label>Raw Material</label>
+                  <label>Materia Prima</label>
                   <input type="text" value={form.raw_material}
                     onChange={(e) => setForm({ ...form, raw_material: e.target.value })}
                     style={{ background: "#f8fafc" }} />
@@ -516,7 +516,7 @@ export default function Receipts() {
               {/* No supplier selected yet */}
               {!form.supplier_id && (
                 <div className="form-group">
-                  <label>Quantity (kg) <span className="required">*</span></label>
+                  <label>Cantidad (kg) <span className="required">*</span></label>
                   <input type="number" min="0.1" step="0.1" placeholder="0.0"
                     value={form.quantity_kg}
                     onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} />
@@ -527,14 +527,14 @@ export default function Receipts() {
               {form.supplier_id && pickupLoading && (
                 <div style={{ padding: "16px", textAlign: "center", color: "#9ca3af", fontSize: "14px",
                   border: "1.5px solid #e5e7eb", borderRadius: "10px" }}>
-                  Loading pickup points...
+                  Cargando puntos de recogidas...
                 </div>
               )}
 
               {/* Supplier has NO pickup points → plain quantity */}
               {form.supplier_id && !pickupLoading && pickupPoints.length === 0 && (
                 <div className="form-group">
-                  <label>Quantity (kg) <span className="required">*</span></label>
+                  <label>Cantidad (kg) <span className="required">*</span></label>
                   <input type="number" min="0.1" step="0.1" placeholder="0.0"
                     value={form.quantity_kg}
                     onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} />
@@ -552,17 +552,17 @@ export default function Receipts() {
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                   }}>
                     <div>
-                      <p style={{ fontWeight: "700", fontSize: "14px", color: "#15803d", margin: "0 0 2px" }}>
-                        📍 Pickup Points
-                        {selectedSupplier && (
-                          <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "400", marginLeft: "8px" }}>
-                            {selectedSupplier.name}
-                          </span>
-                        )}
-                      </p>
-                      <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
-                        {pickupPoints.length} point{pickupPoints.length !== 1 ? "s" : ""} — enter quantity per point
-                      </p>
+                    <p style={{ fontWeight: "700", fontSize: "14px", color: "#15803d", margin: "0 0 2px" }}>
+                      📍 Puntos de Recogida
+                      {selectedSupplier && (
+                        <span style={{ fontSize: "12px", color: "#6b7280", fontWeight: "400", marginLeft: "8px" }}>
+                          {selectedSupplier.name}
+                        </span>
+                      )}
+                    </p>
+                    <p style={{ fontSize: "12px", color: "#6b7280", margin: 0 }}>
+                      {pickupPoints.length} punto{pickupPoints.length !== 1 ? "s" : ""} — introduce la cantidad por punto
+                    </p>
                     </div>
                     {/* Toggle per-point / manual */}
                     <button type="button"
@@ -577,7 +577,7 @@ export default function Receipts() {
                         padding: "5px 12px", fontSize: "12px",
                         fontWeight: "600", cursor: "pointer",
                       }}>
-                      {usePickupPoints ? "✓ Per point" : "Manual total"}
+                      {usePickupPoints ? "✓ Por punto" : "Total manual"}
                     </button>
                   </div>
 
@@ -624,7 +624,7 @@ export default function Receipts() {
                         borderTop: "2px solid #86efac",
                       }}>
                         <span style={{ fontWeight: "700", fontSize: "14px", color: "#15803d" }}>
-                          Total ({filledPoints}/{pickupPoints.length} points)
+                          Total ({filledPoints}/{pickupPoints.length} puntos)
                         </span>
                         <span style={{ fontWeight: "800", fontSize: "20px", color: pickupTotal > 0 ? "#15803d" : "#9ca3af" }}>
                           {pickupTotal.toFixed(1)} kg
@@ -635,7 +635,7 @@ export default function Receipts() {
                     /* Manual total fallback */
                     <div style={{ padding: "14px 16px", background: "#fff" }}>
                       <div className="form-group">
-                        <label>Total Quantity (kg) <span className="required">*</span></label>
+                        <label>Cantidad Total (kg) <span className="required">*</span></label>
                         <input type="number" min="0.1" step="0.1" placeholder="0.0"
                           value={form.quantity_kg}
                           onChange={(e) => setForm({ ...form, quantity_kg: e.target.value })} />
@@ -647,27 +647,27 @@ export default function Receipts() {
 
               {/* Notes — clean, separate from pickup data */}
               <div className="form-group">
-                <label>Notes</label>
-                <input type="text" placeholder="Optional notes about this collection..."
-                  value={form.notes}
-                  onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              <label>Observaciones</label>
+              <input type="text" placeholder="Observaciones opcionales sobre esta recogida..."
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </div>
 
               {formError && (
                 <p className="form-error">
-                  {typeof formError === "string" ? formError : "Validation error — check your inputs."}
+                 {typeof formError === "string" ? formError : "Error de validación — revisa los datos."}
                 </p>
               )}
 
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={closeModal}>Cancel</button>
-                <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? "Saving..."
-                    : editingReceipt ? "Save Changes"
-                    : usePickupPoints && pickupTotal > 0
-                      ? `Add Receipt — ${pickupTotal.toFixed(1)} kg`
-                      : "Add Receipt"}
-                </button>
+              <button type="button" className="btn-secondary" onClick={closeModal}>Cancelar</button>
+              <button type="submit" className="btn-primary" disabled={saving}>
+                {saving ? "Guardando..."
+                  : editingReceipt ? "Guardar Cambios"
+                  : usePickupPoints && pickupTotal > 0
+                    ? `Añadir Recogida — ${pickupTotal.toFixed(1)} kg`
+                    : "Añadir Recogida"}
+              </button>
               </div>
             </form>
           </div>
@@ -679,12 +679,12 @@ export default function Receipts() {
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Delete Receipt</h2>
+              <h2>Eliminar Recogida</h2>
               <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
             </div>
             <p className="confirm-text">
-              Are you sure you want to delete receipt{" "}
-              <strong>#{deleteTarget.receipt_code || deleteTarget.id}</strong> from{" "}
+              ¿Estás seguro de que quieres eliminar la recogida?{" "}
+              <strong>#{deleteTarget.receipt_code || deleteTarget.id}</strong> de{" "}
               <strong>{supplierName(deleteTarget)}</strong>?
             </p>
             {deleteTarget.entrance_id && (
@@ -694,17 +694,17 @@ export default function Receipts() {
                 borderRadius: "10px", padding: "14px 16px",
               }}>
                 <p style={{ fontWeight: "700", color: "#dc2626", fontSize: "14px", margin: "0 0 8px" }}>
-                  ⚠ Traceability Warning
+                  ⚠ Aviso de Trazabilidad
                 </p>
                 <ul style={{ fontSize: "13px", color: "#7f1d1d", margin: 0, paddingLeft: "18px", lineHeight: 1.8 }}>
-                  <li>This receipt is assigned to entrance batch <strong>#{deleteTarget.entrance_id}</strong></li>
-                  <li>Deleting it will reduce the batch quantity and may break the traceability chain</li>
+                  <li>Esta recogida está asignada al lote de entrada <strong>#{deleteTarget.entrance_id}</strong></li>
+                  <li>Eliminarla reducirá la cantidad del lote y podría romper la cadena de trazabilidad</li>
                 </ul>
               </div>
             )}
             <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancel</button>
-              <button className="btn-danger" onClick={confirmDelete}>Delete anyway</button>
+              <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+              <button className="btn-danger" onClick={confirmDelete}>Eliminar de todas formas</button>
             </div>
           </div>
         </div>
