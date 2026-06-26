@@ -44,7 +44,7 @@ export default function Customers() {
       setCustomers(res.data.customers);
       setTotal(res.data.total);
     } catch (err) {
-      setError("Could not load customers. Is the backend running?");
+      setError("No se pudieron cargar los clientes. ¿Está el servidor en ejecución?");
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,7 @@ export default function Customers() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      setFormError("Customer name is required.");
+       setFormError("El nombre del cliente es obligatorio.");
       return;
     }
     setSaving(true);
@@ -117,7 +117,7 @@ export default function Customers() {
     } catch (err) {
       const detail = err.response?.data?.detail;
       setFormError(
-        typeof detail === "string" ? detail : "Something went wrong. Please try again."
+        typeof detail === "string" ? detail : "Ha ocurrido un error. Por favor, inténtalo de nuevo."
       );
     } finally {
       setSaving(false);
@@ -132,7 +132,7 @@ export default function Customers() {
       setDeleteTarget(null);
       fetchCustomers();
     } catch {
-      setError("Could not delete customer.");
+      setError("No se pudo eliminar el cliente.");
       setDeleteTarget(null);
     }
   };
@@ -144,13 +144,13 @@ export default function Customers() {
       {/* Header */}
       <div className="customers-header">
         <div>
-          <h1 className="customers-title">Customers</h1>
-          <p className="customers-subtitle">
-            {total} registered customer{total !== 1 ? "s" : ""}
-          </p>
+        <h1 className="customers-title">Clientes</h1>
+        <p className="customers-subtitle">
+          {total} cliente{total !== 1 ? "s" : ""} registrado{total !== 1 ? "s" : ""}
+        </p>
         </div>
         <button className="btn-primary" onClick={openAdd}>
-          + New Customer
+          + Nuevo Cliente
         </button>
       </div>
 
@@ -161,7 +161,7 @@ export default function Customers() {
           <input
             className="search-input"
             type="text"
-            placeholder="Search by name, city or email..."
+            placeholder="Buscar por nombre, ciudad o email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -180,24 +180,24 @@ export default function Customers() {
             <tr>
               <th>ID</th>
               <th>CIF</th>
-              <th>Name</th>
-              <th>Phone</th>
+              <th>Nombre</th>
+              <th>Teléfono</th>
               <th>Email</th>
-              <th>Address</th>
-              <th>Actions</th>
+              <th>Dirección</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="table-state">Loading...</td>
+                <td colSpan={7} className="table-state">Cargando...</td>
               </tr>
             ) : customers.length === 0 ? (
               <tr>
                 <td colSpan={7} className="table-state">
                   {search
-                    ? "No customers match your search."
-                    : "No customers yet. Add your first one!"}
+                    ? "Ningún cliente coincide con tu búsqueda."
+                    : "No hay clientes todavía. ¡Añade el primero!"}
                 </td>
               </tr>
             ) : (
@@ -210,8 +210,8 @@ export default function Customers() {
                   <td>{c.email || "—"}</td>
                   <td className="td-address">{c.address || "—"}</td>
                   <td className="td-actions">
-                    <button className="btn-edit" onClick={() => openEdit(c)}>Edit</button>
-                    <button className="btn-delete" onClick={() => setDeleteTarget(c)}>Delete</button>
+                    <button className="btn-edit" onClick={() => openEdit(c)}>Editar</button>
+                    <button className="btn-delete" onClick={() => setDeleteTarget(c)}>Eliminar</button>
                   </td>
                 </tr>
               ))
@@ -245,10 +245,10 @@ export default function Customers() {
                 }}>
                   <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
                   <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
-                    Discard changes?
+                    Descartar Cambios
                   </p>
                   <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
-                    You have unsaved data. If you close now it will be lost.
+                    Tienes datos sin guardar. Si cierras ahora se perderán.
                   </p>
                   <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                     <button
@@ -259,7 +259,7 @@ export default function Customers() {
                         color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      Keep editing
+                      Seguir editando
                     </button>
                     <button
                       onClick={() => { setConfirmClose(false); closeModal(); }}
@@ -269,7 +269,7 @@ export default function Customers() {
                         color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      Discard
+                      Descartar
                     </button>
                   </div>
                 </div>
@@ -278,7 +278,7 @@ export default function Customers() {
 
             {/* ── Modal header ── */}
             <div className="modal-header">
-              <h2>{editingCustomer ? "Edit Customer" : "New Customer"}</h2>
+              <h2>{editingCustomer ? "Editar Cliente" : "Nuevo Cliente"}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
 
@@ -289,16 +289,16 @@ export default function Customers() {
                   <label>CIF</label>
                   <input
                     type="text"
-                    placeholder="e.g. B12345678"
+                    placeholder="ej. B12345678"
                     value={form.cif}
                     onChange={(e) => setForm({ ...form, cif: e.target.value })}
                   />
                 </div>
                 <div className="form-group form-group--grow">
-                  <label>Customer Name <span className="required">*</span></label>
+                  <label>Nombre del Cliente <span className="required">*</span></label>
                   <input
                     type="text"
-                    placeholder="Company or person name"
+                    placeholder="Nombre de la empresa o persona"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
                   />
@@ -307,7 +307,7 @@ export default function Customers() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label>Phone</label>
+                  <label>Telefono</label>
                   <input
                     type="text"
                     placeholder="+34 600 000 000"
@@ -327,7 +327,7 @@ export default function Customers() {
               </div>
 
               <div className="form-group">
-                <label>Address</label>
+                <label>Direccion</label>
                 <input
                   type="text"
                   placeholder="Street, number, city..."
@@ -338,17 +338,17 @@ export default function Customers() {
 
               {formError && (
                 <p className="form-error">
-                  {typeof formError === "string" ? formError : "Validation error."}
+                  {typeof formError === "string" ? formError : "Error de validación."}
                 </p>
               )}
 
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={closeModal}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? "Saving..." : editingCustomer ? "Save Changes" : "Add Customer"}
-                </button>
+              <button type="button" className="btn-secondary" onClick={closeModal}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primary" disabled={saving}>
+                {saving ? "Guardando..." : editingCustomer ? "Guardar Cambios" : "Añadir Cliente"}
+              </button>
               </div>
             </form>
           </div>
@@ -360,20 +360,20 @@ export default function Customers() {
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Delete Customer</h2>
+              <h2>Eliminar Cliente</h2>
               <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
             </div>
             <p className="confirm-text">
-              Are you sure you want to delete{" "}
+              ¿Estás seguro de que quieres eliminar a{" "}
               <strong>{deleteTarget.name}</strong>?
-              This action cannot be undone.
+              Esta acción no se puede deshacer.
             </p>
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
-                Cancel
+                Cancelar
               </button>
               <button className="btn-danger" onClick={confirmDelete}>
-                Delete
+                Eliminar
               </button>
             </div>
           </div>

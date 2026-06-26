@@ -5,28 +5,28 @@ import { useAuth } from "../context/AuthContext";
 import LogoRecial from '../Images/LogoRecial.jpg';
 
 const MENU = [
-  { path: "/dashboard",  label: "Dashboard",  icon: "📊" },
-  { path: "/customers",  label: "Customers",  icon: "👥" },
-  { path: "/suppliers",  label: "Suppliers",  icon: "🏭" },
-  { divider: true, label: "OPERATIONS" },
-  { path: "/receipts",   label: "Receipts",   icon: "📥" },
-  { path: "/entrances",  label: "Entrances",  icon: "📦" },
-  { path: "/dispatches", label: "Dispatches", icon: "🚚" },
-  { divider: true, label: "ASSETS" },
-  { path: "/tanks",      label: "Tanks",      icon: "🛢️" },
-  { path: "/map",        label: "Logistics",  icon: "🗺️" },
-  { divider: true, label: "ANALYTICS" },
+  { path: "/dashboard",  label: "Dashboard",       icon: "📊" },
+  { path: "/customers",  label: "Clientes",    icon: "👥" },
+  { path: "/suppliers",  label: "Proveedores", icon: "🏭" },
+  { divider: true, label: "OPERACIONES" },
+  { path: "/receipts",   label: "Albaranes",   icon: "📥" },
+  { path: "/entrances",  label: "Entradas",    icon: "📦" },
+  { path: "/dispatches", label: "Salidas",     icon: "🚚" },
+  { divider: true, label: "ACTIVOS" },
+  { path: "/tanks",      label: "Depósitos",   icon: "🛢️" },
+  { path: "/map",        label: "Logística",   icon: "🗺️" },
+  { divider: true, label: "ANÁLISIS" },
 ];
 
 const REPORTS_ITEMS = [
-  { path: "/reports", label: "Mass Balance", icon: "⚖️" },
+  { path: "/reports", label: "Balance Masas", icon: "⚖️" },
 ];
 
 // Role badge colors
 const ROLE_STYLES = {
-  admin:   { bg: "rgba(220,38,38,0.2)",  color: "#fca5a5", label: "Admin" },
+  admin:   { bg: "rgba(220,38,38,0.2)",  color: "#fca5a5", label: "Administrador" },
   manager: { bg: "rgba(234,179,8,0.2)",  color: "#fde68a", label: "Manager" },
-  driver:  { bg: "rgba(59,130,246,0.2)", color: "#93c5fd", label: "Driver" },
+  driver:  { bg: "rgba(59,130,246,0.2)", color: "#93c5fd", label: "Conductor" },
 };
 
 function SideBar({ isActive }) {
@@ -105,7 +105,7 @@ function SideBar({ isActive }) {
           Reciclajes Recial
         </p>
         <p style={{ fontSize: "11px", color: "rgba(255,255,255,0.35)", margin: "2px 0 0" }}>
-          UCO Traceability System
+          Sistema de Trazabilidad UCO
         </p>
       </div>
 
@@ -153,7 +153,7 @@ function SideBar({ isActive }) {
               onMouseLeave={(e) => hoverOut(e, active)}
             >
               <span style={{ fontSize: "18px", width: "22px", textAlign: "center", flexShrink: 0 }}>📈</span>
-              <span style={{ flex: 1 }}>Reports</span>
+              <span style={{ flex: 1 }}>Informes</span>
               {active && <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(255,255,255,0.9)", flexShrink: 0 }} />}
             </Link>
           );
@@ -167,7 +167,7 @@ function SideBar({ isActive }) {
               onMouseEnter={(e) => hoverIn(e, active)}
               onMouseLeave={(e) => hoverOut(e, active)}>
               <span style={{ fontSize: "18px", width: "22px", textAlign: "center", flexShrink: 0 }}>⚙️</span>
-              <span style={{ flex: 1 }}>Settings</span>
+              <span style={{ flex: 1 }}>Ajustes</span>
               {active && <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "rgba(255,255,255,0.9)", flexShrink: 0 }} />}
             </Link>
           );
@@ -187,7 +187,7 @@ function SideBar({ isActive }) {
             textAlign: "center",
           }}>
             <p style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", margin: "0 0 10px", fontWeight: "600" }}>
-              Sign out?
+              ¿Cerrar sesión?
             </p>
             <div style={{ display: "flex", gap: "8px" }}>
               <button
@@ -199,7 +199,7 @@ function SideBar({ isActive }) {
                   fontWeight: "600", cursor: "pointer",
                 }}
               >
-                Cancel
+                Cancelar
               </button>
               <button
                 onClick={handleLogout}
@@ -210,7 +210,7 @@ function SideBar({ isActive }) {
                   fontWeight: "700", cursor: "pointer",
                 }}
               >
-                Sign out
+                Cerrar Session
               </button>
             </div>
           </div>
@@ -242,7 +242,7 @@ function SideBar({ isActive }) {
                 color: "rgba(255,255,255,0.9)", margin: 0,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>
-                {user?.full_name || user?.username || "User"}
+                {user?.full_name || user?.username || "Usuario"}
               </p>
               <span style={{
                 display: "inline-block",
@@ -261,7 +261,7 @@ function SideBar({ isActive }) {
             {/* Logout button */}
             <button
               onClick={(e) => { e.stopPropagation(); setShowLogoutConfirm(true); }}
-              title="Sign out"
+              title="Cerrar sesión"
               style={{
                 background: "rgba(255,255,255,0.1)",
                 border: "none",
