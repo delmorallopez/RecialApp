@@ -9,7 +9,7 @@ const MENU = [
   { path: "/customers",  label: "Clientes",    icon: "👥" },
   { path: "/suppliers",  label: "Proveedores", icon: "🏭" },
   { divider: true, label: "OPERACIONES" },
-  { path: "/receipts",   label: "Albaranes",   icon: "📥" },
+  { path: "/receipts",   label: "Recogidas",   icon: "📥" },
   { path: "/entrances",  label: "Entradas",    icon: "📦" },
   { path: "/dispatches", label: "Salidas",     icon: "🚚" },
   { divider: true, label: "ACTIVOS" },
