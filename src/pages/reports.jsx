@@ -13,7 +13,7 @@ const REPORT_SECTIONS = [
   {
     id: "traceability", label: "Trazabilidad", icon: "🔗",
     reports: [{
-      id: "mass_balance", title: "Balance de Masa",
+      id: "mass_balance", title: "Balance de Masas",
       description: "Informe completo de balance de masas (ENTRADAS / MERMAS / SALIDAS) siguiendo el formato PG.09.01/REG-A requerido para la certificación de trazabilidad ISCC.",
       format: "Excel (.xlsx)", icon: "⚖️", color: "#2d7a4f", bgColor: "#f0fdf4", borderColor: "#86efac",
     }],

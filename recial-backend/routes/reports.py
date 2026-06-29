@@ -70,7 +70,7 @@ def get_monthly_map(year: int, db: Session):
 # MASS BALANCE — Excel download
 # ════════════════════════════════════════════════════════════
 
-def excel_mass_balance(entrances, dispatches, year: int) -> bytes:
+def excel_mass_balance(entrances, dispatches, receipts, year: int) -> bytes:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
@@ -187,11 +187,75 @@ def excel_mass_balance(entrances, dispatches, year: int) -> bytes:
         if isinstance(val, int): c.number_format = "#,##0"
 
     ws.freeze_panes = "A6"
+    add_receipts_sheet(wb, receipts, year)
     buf = BytesIO()
     wb.save(buf)
     buf.seek(0)
     return buf.read()
 
+# ════════════════════════════════════════════════════════════
+# RECEIPTS REGISTER — sheet added to the Mass Balance workbook
+# ════════════════════════════════════════════════════════════
+
+def add_receipts_sheet(wb, receipts, year: int):
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+    GREEN = "2d7a4f"; DARK = "1a1a2e"; WHITE = "FFFFFF"
+
+    def thin():
+        s = Side(style="thin", color="D1D5DB")
+        return Border(top=s, bottom=s, left=s, right=s)
+
+    ws = wb.create_sheet(title=str(year))
+
+    widths = {"A":14,"B":12,"C":40,"D":18,"E":12,"F":12,"G":8,"H":8,"I":10,"J":12,"K":10}
+    for col, w in widths.items():
+        ws.column_dimensions[col].width = w
+
+    headers = ["FECHA","ID","PROVEEDOR","CONCEPTO","KG ENTRADA"]
+    ws.row_dimensions[1].height = 24
+    for i, h in enumerate(headers, start=1):
+        c = ws.cell(row=1, column=i, value=h)
+        c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+        c.fill = PatternFill("solid", start_color=GREEN)
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        c.border = thin()
+
+    row = 2
+    total = 0
+    for idx, r in enumerate(receipts):
+        bg = "F8FAFC" if idx % 2 == 0 else WHITE
+        supplier_name = r.supplier.name if r.supplier else f"Proveedor #{r.supplier_id}"
+
+        date_c = ws.cell(row=row, column=1, value=r.date); date_c.number_format = "DD/MM/YYYY"
+        id_c   = ws.cell(row=row, column=2, value=r.receipt_code or "")
+        prov_c = ws.cell(row=row, column=3, value=supplier_name)
+        conc_c = ws.cell(row=row, column=4, value="UCO SOSTENIBLE")
+        kg_c   = ws.cell(row=row, column=5, value=int(r.quantity_kg or 0)); kg_c.number_format = "#,##0"
+
+        for cc, ha, bold in [(date_c,"center",False),(id_c,"center",True),
+                             (prov_c,"left",False),(conc_c,"left",False),(kg_c,"center",False)]:
+            cc.font = Font(name="Arial", color=DARK, size=10, bold=bold)
+            cc.fill = PatternFill("solid", start_color=bg)
+            cc.alignment = Alignment(horizontal=ha, vertical="center")
+            cc.border = thin()
+
+        total += int(r.quantity_kg or 0)
+        row += 1
+
+    # TOTAL row
+    ws.row_dimensions[row].height = 22
+    tc = ws.cell(row=row, column=4, value="TOTAL")
+    tv = ws.cell(row=row, column=5, value=total)
+    for c in (tc, tv):
+        c.font = Font(name="Arial", bold=True, color=WHITE, size=10)
+        c.fill = PatternFill("solid", start_color=GREEN)
+        c.alignment = Alignment(horizontal="center", vertical="center")
+        c.border = thin()
+    tv.number_format = "#,##0"
+
+    ws.freeze_panes = "A2"
+    return ws
 
 @router.get("/mass-balance")
 def get_mass_balance(
@@ -210,7 +274,14 @@ def get_mass_balance(
         Dispatch.date <= date(year, 12, 31),
     ).order_by(Dispatch.date).all()
 
-    excel_bytes = excel_mass_balance(entrances, dispatches, year)
+    receipts = db.query(Receipt).options(
+        joinedload(Receipt.supplier)
+    ).filter(
+        Receipt.date >= date(year, 1, 1),
+        Receipt.date <= date(year, 12, 31),
+    ).order_by(Receipt.date).all()
+
+    excel_bytes = excel_mass_balance(entrances, dispatches, receipts, year)
     return StreamingResponse(
         BytesIO(excel_bytes),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
