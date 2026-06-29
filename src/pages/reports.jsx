@@ -14,7 +14,7 @@ const REPORT_SECTIONS = [
     id: "traceability", label: "Trazabilidad", icon: "🔗",
     reports: [{
       id: "mass_balance", title: "Balance de Masa",
-      description: "Informe completo de balance de masa (ENTRADAS / MERMAS / SALIDAS) siguiendo el formato PG.09.01/REG-A requerido para la certificación de trazabilidad ISCC.",
+      description: "Informe completo de balance de masas (ENTRADAS / MERMAS / SALIDAS) siguiendo el formato PG.09.01/REG-A requerido para la certificación de trazabilidad ISCC.",
       format: "Excel (.xlsx)", icon: "⚖️", color: "#2d7a4f", bgColor: "#f0fdf4", borderColor: "#86efac",
     }],
   },
@@ -174,7 +174,7 @@ export default function Reports() {
 
     setGenerating(reportId); setError(null); setSuccess(null);
     try {
-      const res = await fetch(`http://localhost:8000/reports/mass-balance?year=${yearFilter}`,
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/reports/mass-balance?year=${yearFilter}`,
         { method:"GET", headers:{ Authorization:`Bearer ${localStorage.getItem("token")}` } });
       if (!res.ok) throw new Error();
       const blob = await res.blob();
@@ -305,7 +305,7 @@ export default function Reports() {
       if (urbanFilters.date_to)      p.append("date_to",      urbanFilters.date_to);
       if (urbanFilters.period_label) p.append("period_label", urbanFilters.period_label);
       const res = await fetch(
-        `http://localhost:8000/reports/urban-collection/${urbanFilters.supplier_id}/pdf?${p}`,
+        `${config.apiUrl}reports/urban-collection/${urbanFilters.supplier_id}/pdf?${p}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       if (!res.ok) throw new Error();
@@ -323,7 +323,7 @@ export default function Reports() {
   const downloadQuarterlyExcel = async () => {
     setDownloadingQuarter(true);
     try {
-      const res = await fetch(`http://localhost:8000/reports/quarterly-closing/excel?year=${quarterYear}`,
+      const res = await fetch(`${config.apiUrl}reports/quarterly-closing/excel?year=${quarterYear}`,
         { headers:{ Authorization:`Bearer ${localStorage.getItem("token")}` } });
       if (!res.ok) throw new Error();
       const blob=await res.blob(); const url=window.URL.createObjectURL(blob);
