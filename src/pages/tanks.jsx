@@ -87,7 +87,7 @@ export default function Tanks() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim()) {
-      setFormError("Tank name is required.");
+      setFormError("El nombre del depósito es obligatorio.");
       return;
     }
     setSaving(true);
@@ -106,7 +106,7 @@ export default function Tanks() {
       closeModal();
       fetchTanks();
     } catch (err) {
-      setFormError(err.response?.data?.detail || "Something went wrong.");
+      setFormError(err.response?.data?.detail || "Ocurrio algun error.");
     } finally {
       setSaving(false);
     }
@@ -120,7 +120,7 @@ export default function Tanks() {
       setDeleteTarget(null);
       fetchTanks();
     } catch (err) {
-      setError(err.response?.data?.detail || "Could not delete tank.");
+      setError(err.response?.data?.detail || "No se pudo eliminar el depósito.");
       setDeleteTarget(null);
     }
   };
@@ -192,19 +192,19 @@ export default function Tanks() {
       {/* ── Header ── */}
       <div className="customers-header">
         <div>
-          <h1 className="customers-title">Tanks</h1>
+          <h1 className="customers-title">Depósitos</h1>
           <p className="customers-subtitle">
-            {activeTanks} active tank{activeTanks !== 1 ? "s" : ""} —{" "}
+            {activeTanks} deposito activo{activeTanks !== 1 ? "s" : ""} —{" "}
             <strong>{totalStock.toLocaleString()} kg</strong> in stock
             {totalCapacity > 0 && (
               <span style={{ color: "#9ca3af" }}>
-                {" "}/ {totalCapacity.toLocaleString()} kg total capacity
+                {" "}/ {totalCapacity.toLocaleString()} capacidad total kg
               </span>
             )}
           </p>
         </div>
         <button className="btn-primary" onClick={openAdd}>
-          + New Tank
+          + Nuevo deposito
         </button>
       </div>
 
@@ -217,10 +217,10 @@ export default function Tanks() {
           marginBottom: "28px",
         }}>
           {[
-            { label: "Total Tanks", value: total, color: "#1a1a2e" },
-            { label: "Active Tanks", value: activeTanks, color: "#15803d" },
+            { label: "Total Depósitos", value: total, color: "#1a1a2e" },
+            { label: "Depósitos activos", value: activeTanks, color: "#15803d" },
             { label: "Total Stock (kg)", value: totalStock.toLocaleString(), color: "#2d7a4f" },
-            { label: "Total Capacity (kg)", value: totalCapacity > 0 ? totalCapacity.toLocaleString() : "—", color: "#374151" },
+            { label: "Capacidad Total (kg)", value: totalCapacity > 0 ? totalCapacity.toLocaleString() : "—", color: "#374151" },
           ].map(({ label, value, color }) => (
             <div key={label} style={{
               background: "#fff", border: "1.5px solid #e5e7eb",
@@ -246,21 +246,22 @@ export default function Tanks() {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Tank Name</th>
-              <th>Status</th>
-              <th>Stock / Capacity</th>
-              <th>Actions</th>
+              <th>Nombre del depósito</th>
+              <th>Estado</th>
+              <th>Stock / Capacidad</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="table-state">Loading...</td>
+                <td colSpan={5} className="table-state">Cargando...</td>
               </tr>
             ) : tanks.length === 0 ? (
               <tr>
                 <td colSpan={5} className="table-state">
                   No tanks yet. Add your first tank!
+                  No depósitos todavia. Añade el primer depósito
                 </td>
               </tr>
             ) : (
@@ -273,8 +274,8 @@ export default function Tanks() {
                     <StockBar stock={t.stock} capacity={t.capacity} />
                   </td>
                   <td className="td-actions">
-                    <button className="btn-edit" onClick={() => openEdit(t)}>Edit</button>
-                    <button className="btn-delete" onClick={() => setDeleteTarget(t)}>Delete</button>
+                    <button className="btn-edit" onClick={() => openEdit(t)}>Editar</button>
+                    <button className="btn-delete" onClick={() => setDeleteTarget(t)}>Eliminar</button>
                   </td>
                 </tr>
               ))
@@ -304,10 +305,11 @@ export default function Tanks() {
                 }}>
                   <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
                   <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
-                    Discard changes?
+                    Descartar Cambios?
                   </p>
                   <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
                     You have unsaved data. If you close now it will be lost.
+                    Tienes cambios sin guardar, Si tu cierras ahora se perderán
                   </p>
                   <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                     <button
@@ -318,7 +320,7 @@ export default function Tanks() {
                         color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      Keep editing
+                      Seguir editando
                     </button>
                     <button
                       onClick={() => { setConfirmClose(false); closeModal(); }}
@@ -328,24 +330,24 @@ export default function Tanks() {
                         color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      Discard
+                      Descartar
                     </button>
                   </div>
                 </div>
               </div>
             )}  
             <div className="modal-header">
-              <h2>{editingTank ? "Edit Tank" : "New Tank"}</h2>
+              <h2>{editingTank ? "Editar Depósito" : "Nuevo depósito"}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>
             </div>
             <form className="modal-form" onSubmit={handleSubmit}>
 
               {/* Name */}
               <div className="form-group">
-                <label>Tank Name <span className="required">*</span></label>
+                <label>Nombre del depósito <span className="required">*</span></label>
                 <input
                   type="text"
-                  placeholder="e.g. Tank 1, Tank A..."
+                  placeholder="e.g. Depósito 1, Depósito A..."
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
@@ -353,11 +355,11 @@ export default function Tanks() {
 
               {/* Capacity */}
               <div className="form-group">
-                <label>Capacity (kg)</label>
+                <label>Capacidad (kg)</label>
                 <input
                   type="number"
                   min="1"
-                  placeholder="Maximum capacity in kg"
+                  placeholder="Capacidad máxima en KG"
                   value={form.capacity}
                   onChange={(e) => setForm({ ...form, capacity: e.target.value })}
                 />
@@ -365,7 +367,7 @@ export default function Tanks() {
 
               {/* Status toggle */}
               <div className="form-group">
-                <label>Status</label>
+                <label>Estado</label>
                 <div style={{ display: "flex", gap: "10px" }}>
                   {[true, false].map((val) => (
                     <button
@@ -381,7 +383,7 @@ export default function Tanks() {
                         fontWeight: "600", fontSize: "14px", cursor: "pointer",
                       }}
                     >
-                      {val ? "Active" : "Inactive"}
+                      {val ? "Activo" : "Inactivo"}
                     </button>
                   ))}
                 </div>
@@ -394,11 +396,11 @@ export default function Tanks() {
                   borderRadius: "10px", padding: "14px 16px",
                 }}>
                   <p style={{ fontSize: "13px", color: "#6b7280", margin: "0 0 8px", fontWeight: "600" }}>
-                    Current Stock
+                    Actual Stock
                   </p>
                   <StockBar stock={editingTank.stock} capacity={editingTank.capacity} />
                   <p style={{ fontSize: "12px", color: "#9ca3af", margin: "8px 0 0" }}>
-                    Stock is updated automatically when entrances are created or deleted.
+                    El stock se actualiza automaticamente cuando se crean o eliminan entradas
                   </p>
                 </div>
               )}
@@ -407,10 +409,10 @@ export default function Tanks() {
 
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={closeModal}>
-                  Cancel
+                  Cancelar
                 </button>
                 <button type="submit" className="btn-primary" disabled={saving}>
-                  {saving ? "Saving..." : editingTank ? "Save Changes" : "Add Tank"}
+                  {saving ? "Guardando..." : editingTank ? "Cambios guardados" : "Añadir depósito"}
                 </button>
               </div>
             </form>
@@ -423,23 +425,23 @@ export default function Tanks() {
         <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="modal modal--confirm" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Delete Tank</h2>
+              <h2>Eliminar depósito</h2>
               <button className="modal-close" onClick={() => setDeleteTarget(null)}>✕</button>
             </div>
             <p className="confirm-text">
-              Are you sure you want to delete <strong>{deleteTarget.name}</strong>?
+              Estas seguro que quieres eliminar <strong>{deleteTarget.name}</strong>?
               {deleteTarget.stock > 0 && (
                 <span style={{ display: "block", marginTop: "8px", color: "#dc2626", fontWeight: "600" }}>
-                  ⚠ This tank still has {deleteTarget.stock} kg of stock.
+                  ⚠ Este depósito todavia tiene {deleteTarget.stock} kg de stock.
                 </span>
               )}
             </p>
             <div className="modal-actions">
               <button className="btn-secondary" onClick={() => setDeleteTarget(null)}>
-                Cancel
+                Cancelar
               </button>
               <button className="btn-danger" onClick={confirmDelete}>
-                Delete
+                Eliminar
               </button>
             </div>
           </div>
