@@ -336,7 +336,7 @@ export default function Dispatches() {
       if (!invoiceData) {
         await saveInvoice();
       }
-      const url = `${config.apiUrl}/invoices/dispatch/${invoiceDispatch.id}/pdf?price_per_kg=${invoiceForm.price_per_kg}`;
+      const url = `${process.env.REACT_APP_API_URL}/invoices/dispatch/${invoiceDispatch.id}/pdf?price_per_kg=${invoiceForm.price_per_kg}`;
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
