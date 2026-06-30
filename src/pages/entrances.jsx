@@ -222,13 +222,17 @@ export default function Entrances() {
        setFormError("Por favor, selecciona al menos una recogida.");
       return;
     }
+    if (!form.tank_id) {
+      setFormError("Por favor, selecciona un depósito.");
+      return;
+    }
     setSaving(true);
     setFormError(null);
     try {
       await createEntrance({
         supplier_type: form.supplier_type,
         date: form.date,
-        tank_id: form.tank_id ? parseInt(form.tank_id) : null,
+        tank_id: parseInt(form.tank_id),
         receipt_ids: form.receipt_ids,
       });
       closeModal();
@@ -535,11 +539,11 @@ export default function Entrances() {
 
               {/* Tank */}
               <div className="form-group">
-                <label>Asignar Depòsito</label>
+              <label>Asignar Depósito <span className="required">*</span></label>
                 <select value={form.tank_id}
                   onChange={(e) => setForm({ ...form, tank_id: e.target.value })}
                   style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
-                  <option value="">Seleccionar un depòsito (opcional)...</option>
+                  <option value="">Seleccionar un depòsito (obligatorio)...</option>
                   {tanks.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}{t.capacity ? ` — ${t.stock || 0} / ${t.capacity} kg` : ` — ${t.stock || 0} kg`}
@@ -712,7 +716,7 @@ export default function Entrances() {
                     onChange={(e) => setEditForm({ ...editForm, date: e.target.value })} />
                 </div>
                 <div className="form-group form-group--grow">
-                  <label>Depósito</label>
+                <label>Depósito <span className="required">*</span></label>
                   <select value={editForm.tank_id}
                     onChange={(e) => setEditForm({ ...editForm, tank_id: e.target.value })}
                     style={{ padding: "11px 14px", border: "1.5px solid #e5e7eb", borderRadius: "9px", fontSize: "15px", color: "#374151", background: "#fff", width: "100%" }}>
