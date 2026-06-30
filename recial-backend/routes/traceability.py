@@ -243,12 +243,12 @@ def _generate_traceability_pdf(trace_data: dict) -> bytes:
         c.drawImage(_LOGO, RIGHT - 35*mm, TOP - 12*mm, width=35*mm, height=14*mm,
                     preserveAspectRatio=True, mask='auto')
 
-    title = "TRACEABILITY CERTIFICATE — FORWARD TRACE" if direction == "forward" else "TRACEABILITY CERTIFICATE — BACKWARD TRACE"
+    title = "CERTIFICADO DE TRAZABILIDAD — HACIA ADELANTE" if direction == "forward" else "CERTIFICADO DE TRAZABILIDAD — HACIA ATRÁS"
     c.setFont("Helvetica-Bold", 14)
     c.setFillColor(GREEN_DARK)
     c.drawString(LEFT, TOP - 8*mm, title)
 
-    subtitle = f"Generated: {date_type.today().strftime('%d/%m/%Y')}  ·  Root batch: {root['batch_id']}"
+    subtitle = f"Generado: {date_type.today().strftime('%d/%m/%Y')}  ·   Lote raíz: {root['batch_id']}"
     c.setFont("Helvetica", 9)
     c.setFillColor(GRAY)
     c.drawString(LEFT, TOP - 13*mm, subtitle)
@@ -260,7 +260,7 @@ def _generate_traceability_pdf(trace_data: dict) -> bytes:
     y = TOP - 25*mm
 
     # ── Root node box ──
-    root_label = "STARTING POINT: RECEIPT" if direction == "forward" else "STARTING POINT: DISPATCH"
+    root_label = "PUNTO DE PARTIDA: ALBARÁN" if direction == "forward" else "PUNTO DE PARTIDA: SALIDA"
     root_color = BLUE if direction == "forward" else AMBER
     c.setFillColor(root_color)
     c.roundRect(LEFT, y - 18*mm, RIGHT - LEFT, 16*mm, 3*mm, fill=1, stroke=0)
@@ -286,17 +286,17 @@ def _generate_traceability_pdf(trace_data: dict) -> bytes:
     c.setFont("Helvetica-Bold", 9)
     if direction == "forward":
         stats = [
-            ("Entrances fed", str(summary["total_entrances"])),
-            ("Dispatches reached", str(summary["total_dispatches"])),
-            ("Receipt kg", f"{summary['receipt_kg']:.0f} kg"),
-            ("Total dispatched", f"{summary['total_dispatched_kg']:.0f} kg"),
+            ("Entradas alimentadas", str(summary["total_entrances"])),
+            ("Salidas alcanzadas", str(summary["total_dispatches"])),
+            ("kg Albarán", f"{summary['receipt_kg']:.0f} kg"),
+            ("Total despachado", f"{summary['total_dispatched_kg']:.0f} kg"),
         ]
     else:
         stats = [
-            ("Entrances used", str(summary["total_entrances"])),
-            ("Receipts traced", str(summary["total_receipts"])),
-            ("Dispatch kg", f"{summary['dispatch_kg']:.0f} kg"),
-            ("Total received", f"{summary['total_received_kg']:.0f} kg"),
+            ("Entradas utilizadas", str(summary["total_entrances"])),
+            ("Albaranes rastreados", str(summary["total_receipts"])),
+            ("kg Salida", f"{summary['dispatch_kg']:.0f} kg"),
+            ("Total recibido", f"{summary['total_received_kg']:.0f} kg"),
         ]
     col_w = (RIGHT - LEFT) / 4
     for i, (label, value) in enumerate(stats):
@@ -316,23 +316,23 @@ def _generate_traceability_pdf(trace_data: dict) -> bytes:
         c.roundRect(LEFT, y - 8*mm, RIGHT - LEFT, 7*mm, 1.5*mm, fill=1, stroke=0)
         c.setFillColor(WHITE)
         c.setFont("Helvetica-Bold", 9)
-        c.drawString(LEFT + 4*mm, y - 5.5*mm, f"ENTRANCE: {en['batch_id']}")
+        c.drawString(LEFT + 4*mm, y - 5.5*mm, f"ENTRADA: {en['batch_id']}")
         c.setFont("Helvetica", 8)
         c.drawRightString(RIGHT - 4*mm, y - 5.5*mm,
             f"{en.get('tank_name','—')}  ·  {en.get('date','—')}  ·  {en.get('quantity_kg',0):.0f} kg")
         y -= 12*mm
 
         linked = en.get("dispatches") if direction == "forward" else en.get("receipts")
-        linked_label = "Dispatch" if direction == "forward" else "Receipt"
+        linked_label = "Salida" if direction == "forward" else "Albarán"
 
         if not linked:
             c.setFont("Helvetica-Oblique", 8)
             c.setFillColor(GRAY)
-            c.drawString(LEFT + 6*mm, y - 4*mm, f"No {linked_label.lower()}s linked yet")
+            c.drawString(LEFT + 6*mm, y - 4*mm, f"Aún no hay {linked_label.lower()}s vinculados")
             y -= 10*mm
             continue
 
-        headers = [f"{linked_label} Batch", "Date", ("Customer" if direction == "forward" else "Supplier"), "Quantity (kg)"]
+        headers = [f"Lote de {linked_label}", "Fecha", ("Cliente" if direction == "forward" else "Proveedor"), "Cantidad (kg)"]
         data = [headers]
         for item in linked:
             if direction == "forward":
