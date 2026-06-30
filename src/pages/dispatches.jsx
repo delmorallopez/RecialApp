@@ -52,6 +52,7 @@ export default function Dispatches() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
 
   // Detail view
   const [detailDispatch, setDetailDispatch] = useState(null);
@@ -150,11 +151,25 @@ export default function Dispatches() {
     loadDropdownData();
   };
 
+  const handleOverlayClick = () => {
+    const isDirty =
+      form.customer_id ||
+      form.tank_id ||
+      form.post_number ||
+      form.quantity ||
+      form.entrance_ids.length > 0 ||
+      form.disposal_quantity ||
+      form.disposal_notes;
+    if (isDirty) setConfirmClose(true);
+    else closeModal();
+  };
+
   const closeModal = () => {
     setModalOpen(false);
     setEditingDispatch(null);
     setForm(EMPTY_FORM);
     setFormError(null);
+    setConfirmClose(false)
   };
 
   const toggleEntrance = (id) => {
@@ -714,9 +729,54 @@ export default function Dispatches() {
 
       {/* ── Create / Edit Dispatch Modal ── */}
       {modalOpen && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal" style={{ maxWidth: "680px", maxHeight: "90vh", overflowY: "auto" }}
+        <div className="modal-overlay" onClick={handleOverlayClick}>
+          <div className="modal" style={{ maxWidth: "680px", maxHeight: "90vh", overflowY: "auto", position: "relative" }}
             onClick={(e) => e.stopPropagation()}>
+            {confirmClose && (
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "rgba(0,0,0,0.5)",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  zIndex: 20, borderRadius: "16px",
+                }}>
+                  <div style={{
+                    background: "#fff", borderRadius: "14px",
+                    padding: "28px 32px", maxWidth: "360px",
+                    textAlign: "center",
+                    boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+                  }}>
+                    <p style={{ fontSize: "22px", marginBottom: "8px" }}>⚠️</p>
+                    <p style={{ fontWeight: "700", fontSize: "16px", color: "#1a1a2e", marginBottom: "8px" }}>
+                      ¿Descartar cambios?
+                    </p>
+                    <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "24px" }}>
+                      Tienes datos sin guardar. Si cierras ahora se perderán.
+                    </p>
+                    <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                      <button
+                        onClick={() => setConfirmClose(false)}
+                        style={{
+                          padding: "10px 20px", borderRadius: "8px",
+                          border: "1.5px solid #e5e7eb", background: "#fff",
+                          color: "#374151", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                        }}
+                      >
+                        Seguir editando
+                      </button>
+                      <button
+                        onClick={() => { setConfirmClose(false); closeModal(); }}
+                        style={{
+                          padding: "10px 20px", borderRadius: "8px",
+                          border: "none", background: "#dc2626",
+                          color: "#fff", fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                        }}
+                      >
+                        Descartar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}  
             <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 10 }}>
               <div>
                 <h2>{editingDispatch ? `Edit ${editingDispatch.batch_id}` : "Nueva Salida"}</h2>
