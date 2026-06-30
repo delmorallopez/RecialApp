@@ -323,7 +323,7 @@ export default function Reports() {
   const downloadQuarterlyExcel = async () => {
     setDownloadingQuarter(true);
     try {
-      const res = await fetch(`${config.apiUrl}reports/quarterly-closing/excel?year=${quarterYear}`,
+      const res = await fetch(`${config.apiUrl}/reports/quarterly-closing/excel?year=${quarterYear}`,
         { headers:{ Authorization:`Bearer ${localStorage.getItem("token")}` } });
       if (!res.ok) throw new Error();
       const blob=await res.blob(); const url=window.URL.createObjectURL(blob);
