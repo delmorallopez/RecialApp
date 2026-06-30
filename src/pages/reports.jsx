@@ -280,7 +280,7 @@ export default function Reports() {
       const blob = await res.blob();
       const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
       a.download = "Recial_Suppliers.pdf"; document.body.appendChild(a); a.click(); a.remove();
-    } catch { setCustListError("No se pudo descargar el PDF."); }
+    } catch { setSuppListError("No se pudo descargar el PDF."); }
     finally { setDlSuppList(false); }
   };
 
