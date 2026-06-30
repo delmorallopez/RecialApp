@@ -1180,7 +1180,7 @@ def _generate_customers_pdf(customers: list) -> bytes:
     # ── Title ─────────────────────────────────────────────────
     c.setFont("Helvetica-Bold", 16)
     c.setFillColor(GREEN_DARK)
-    c.drawString(LEFT, TOP - 8*mm, "CUSTOMER LIST")
+    c.drawString(LEFT, TOP - 8*mm, "LISTADO CLIENTES")
 
     c.setFont("Helvetica", 9)
     c.setFillColor(GRAY)
@@ -1284,13 +1284,13 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
     # ── Title ─────────────────────────────────────────────────
     c.setFont("Helvetica-Bold", 16)
     c.setFillColor(GREEN_DARK)
-    c.drawString(LEFT, TOP - 8*mm, "SUPPLIER LIST")
+    c.drawString(LEFT, TOP - 8*mm, "LISTADO PROVEEDORES")
 
     c.setFont("Helvetica", 9)
     c.setFillColor(GRAY)
     c.drawString(LEFT, TOP - 14*mm,
-        f"Generated: {date_type.today().strftime('%d/%m/%Y')}  ·  "
-        f"{len(suppliers)} suppliers  ·  {len(horeca)} Horeca  ·  {len(urban)} Urban")
+        f"Generado: {date_type.today().strftime('%d/%m/%Y')}  ·  "
+        f"{len(suppliers)} proveedores  ·  {len(horeca)} Horeca  ·  {len(urban)} Urbano")
 
     c.setStrokeColor(GREEN)
     c.setLineWidth(2)
@@ -1299,15 +1299,16 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
     table_y = TOP - 24*mm
 
     # ── Main suppliers table ──────────────────────────────────
-    headers = ["#", "Name", "Type", "CIF", "Address", "Email", "Phone", "Pickup Pts"]
+    headers = ["#", "Nombre", "Tipo", "CIF", "Dirección", "Email", "Teléfono", "Puntos"]
     data    = [headers]
 
     for i, s in enumerate(suppliers, 1):
         pp_count = len(s.get("pickup_points", []))
+        stype = s.get("supplier_type")
         data.append([
             str(i),
             s.get("name") or "—",
-            s.get("supplier_type") or "—",
+            ("Urbano" if stype == "Urban" else stype) or "—",
             s.get("cif") or "—",
             s.get("address") or "—",
             s.get("email") or "—",
@@ -1333,7 +1334,6 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
         ("ALIGN",         (7,0), (7,-1),  "CENTER"),
         ("ALIGN",         (1,1), (1,-1),  "LEFT"),
         ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#d1d5db")),
-        ("ROWHEIGHT",     (0,0), (-1,-1), 8*mm),
         ("TOPPADDING",    (0,0), (-1,-1), 2),
         ("BOTTOMPADDING", (0,0), (-1,-1), 2),
         ("LEFTPADDING",   (0,0), (-1,-1), 4),
@@ -1360,7 +1360,7 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
     if urban_with_points:
         c.setFont("Helvetica-Bold", 12)
         c.setFillColor(GREEN_DARK)
-        c.drawString(LEFT, pickup_y, "URBAN SUPPLIERS — PICKUP POINTS WITH COORDINATES")
+        c.drawString(LEFT, pickup_y, "PROVEEDORES URBANOS — PUNTOS DE RECOGIDA CON COORDENADAS")
 
         c.setStrokeColor(GREEN_LIGHT)
         c.setLineWidth(1.5)
@@ -1376,7 +1376,7 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
             c.drawString(LEFT, pickup_y, f"  {s['name']}")
             pickup_y -= 6*mm
 
-            pp_headers = ["Pickup Point Name", "Latitude", "Longitude", "Notes"]
+            pp_headers = ["Nombre del Punto de Recogida", "Latitud", "Longitud", "Observaciones"]
             pp_data    = [pp_headers]
             for pp in pps:
                 lat = f"{pp['latitude']:.6f}"  if pp.get("latitude")  else "—"
@@ -1403,7 +1403,6 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
                 ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
                 ("ALIGN",         (1,1), (2,-1),  "CENTER"),
                 ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#d1d5db")),
-                ("ROWHEIGHT",     (0,0), (-1,-1), 7*mm),
                 ("LEFTPADDING",   (0,0), (-1,-1), 4),
                 ("TOPPADDING",    (0,0), (-1,-1), 2),
                 ("BOTTOMPADDING", (0,0), (-1,-1), 2),
@@ -1417,7 +1416,7 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
     c.setFont("Helvetica", 8)
     c.setFillColor(GRAY)
     c.drawCentredString(w / 2, 8*mm,
-        "RECICLAJES RECIAL S.L.  ·  C/ Carrera 56, 14880 Luque (Córdoba)  ·  info@recial.es")
+       "RECICLAJES RECIAL S.L.  ·  C/ Carrera 56, 14880 Luque (Córdoba)  ·  info@recial.es")
 
     c.save()
     buf.seek(0)
