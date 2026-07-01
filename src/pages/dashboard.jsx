@@ -7,7 +7,7 @@ import {
 import { getDashboard } from "../services/dashboardServices";
 import "../stylecss/dashboard.css";
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 const COLORS = {
   receipts:  "#2d7a4f",
   entrances: "#1d4ed8",
@@ -35,21 +35,21 @@ export default function Dashboard() {
     setError(null);
     getDashboard(year)
       .then((res) => setData(res.data))
-      .catch(() => setError("Could not load dashboard data."))
+      .catch(() => setError("No se pudieron cargar los datos del panel."))
       .finally(() => setLoading(false));
   }, [year]);
 
   if (loading) return (
     <div className="dash-loading">
       <div className="dash-spinner" />
-      <p>Loading dashboard...</p>
+      <p>Cargando dashboard...</p>
     </div>
   );
 
   if (error) return (
     <div className="dash-error">
       <p>{error}</p>
-      <button onClick={() => window.location.reload()}>Retry</button>
+      <button onClick={() => window.location.reload()}>Reintentar</button>
     </div>
   );
 
@@ -58,16 +58,16 @@ export default function Dashboard() {
   // ── Monthly chart data ───────────────────────────────────
   const chartData = monthly.map((m) => ({
     name: MONTHS[m.month - 1],
-    "Receipts": m.receipts_kg,
-    "Entrances": m.entrances_kg,
-    "Dispatches": m.dispatches_kg,
-    "Disposal": m.disposal_kg,
+    "Recogidas": m.receipts_kg,
+    "Entradas": m.entrances_kg,
+    "Salidas": m.dispatches_kg,
+    "Mermas": m.disposal_kg,
   }));
 
   // ── Donut data ───────────────────────────────────────────
   const donutData = [
     { name: "Horeca", value: supplier_split.horeca_kg },
-    { name: "Urban",  value: supplier_split.urban_kg  },
+    { name: "Urbano",  value: supplier_split.urban_kg  },
   ];
 
   // ── Calendar helpers ─────────────────────────────────────
@@ -132,7 +132,7 @@ export default function Dashboard() {
       <div className="dash-header">
         <div>
           <h1 className="dash-title">Dashboard</h1>
-          <p className="dash-subtitle">Reciclajes Recial — Overview {year}</p>
+          <p className="dash-subtitle">Reciclajes Recial — Resumen {year}</p>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           {/* Year selector */}
@@ -141,21 +141,21 @@ export default function Dashboard() {
             {years.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
           {/* Quick actions */}
-          <button className="dash-quick-btn green" onClick={() => navigate("/receipts")}>+ Receipt</button>
-          <button className="dash-quick-btn blue" onClick={() => navigate("/entrances")}>+ Entrance</button>
-          <button className="dash-quick-btn amber" onClick={() => navigate("/dispatches")}>+ Dispatch</button>
+          <button className="dash-quick-btn green" onClick={() => navigate("/receipts")}>+ Recogida</button>
+          <button className="dash-quick-btn blue" onClick={() => navigate("/entrances")}>+ Entrada</button>
+          <button className="dash-quick-btn amber" onClick={() => navigate("/dispatches")}>+ Salida</button>
         </div>
       </div>
 
       {/* ── KPI Cards ── */}
       <div className="dash-kpi-grid">
         {[
-          { label: "Collected (kg)", value: kpi.receipts_kg.toLocaleString(), sub: `${kpi.receipts_count} receipts`, color: COLORS.receipts, icon: "📥" },
-          { label: "Entered (kg)", value: kpi.entrances_kg.toLocaleString(), sub: `${kpi.entrances_count} batches`, color: COLORS.entrances, icon: "📦" },
-          { label: "Dispatched (kg)", value: kpi.dispatches_kg.toLocaleString(), sub: `${kpi.dispatches_count} dispatches`, color: COLORS.dispatches, icon: "🚚" },
-          { label: "Disposal (kg)", value: kpi.disposal_kg.toLocaleString(), sub: "residue / waste", color: COLORS.disposal, icon: "♻️" },
-          { label: "Tank Stock (kg)", value: kpi.total_stock_kg.toLocaleString(), sub: `${tanks.length} active tanks`, color: "#7c3aed", icon: "🛢️" },
-          { label: "Pending Receipts", value: kpi.pending_receipts, sub: `${kpi.pending_kg.toLocaleString()} kg unassigned`, color: "#b45309", icon: "⏳", alert: kpi.pending_receipts > 0 },
+          { label: "Recogido (kg)", value: kpi.receipts_kg.toLocaleString(), sub: `${kpi.receipts_count} albaranes`, color: COLORS.receipts, icon: "📥" },
+          { label: "Entrada (kg)", value: kpi.entrances_kg.toLocaleString(), sub: `${kpi.entrances_count} lotes`, color: COLORS.entrances, icon: "📦" },
+          { label: "Vendido (kg)", value: kpi.dispatches_kg.toLocaleString(), sub: `${kpi.dispatches_count} salidas`, color: COLORS.dispatches, icon: "🚚" },
+          { label: "Mermas (kg)", value: kpi.disposal_kg.toLocaleString(), sub: "residuos / desecho", color: COLORS.disposal, icon: "♻️" },
+          { label: "Stock en Depósitos (kg)", value: kpi.total_stock_kg.toLocaleString(), sub: `${tanks.length} depósitos activos`, color: "#7c3aed", icon: "🛢️" },
+          { label: "Albaranes Pendientes", value: kpi.pending_receipts, sub: `${kpi.pending_kg.toLocaleString()} kg sin asignar`, color: "#b45309", icon: "⏳", alert: kpi.pending_receipts > 0 },
         ].map(({ label, value, sub, color, icon, alert }) => (
           <div key={label} className={`dash-kpi-card ${alert ? "dash-kpi-alert" : ""}`}>
             <div className="dash-kpi-icon" style={{ background: color + "18", color }}>{icon}</div>
@@ -177,8 +177,8 @@ export default function Dashboard() {
           {/* Bar chart — monthly breakdown */}
           <div className="dash-card">
             <div className="dash-card-header">
-              <h2>Monthly Mass Balance {year}</h2>
-              <p>Receipts · Entrances · Dispatches · Disposal (kg)</p>
+              <h2>Balance Masas Mensual {year}</h2>
+              <p>Recogidas · Entradas · Salidas · Mermas (kg)</p>
             </div>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -187,10 +187,10 @@ export default function Dashboard() {
                 <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ fontSize: "12px" }} />
-                <Bar dataKey="Receipts"  fill={COLORS.receipts}  radius={[3,3,0,0]} />
-                <Bar dataKey="Entrances" fill={COLORS.entrances} radius={[3,3,0,0]} />
-                <Bar dataKey="Dispatches" fill={COLORS.dispatches} radius={[3,3,0,0]} />
-                <Bar dataKey="Disposal"  fill={COLORS.disposal}  radius={[3,3,0,0]} />
+                <Bar dataKey="Recogidas"  fill={COLORS.receipts}  radius={[3,3,0,0]} />
+                <Bar dataKey="Entradas" fill={COLORS.entrances} radius={[3,3,0,0]} />
+                <Bar dataKey="Salidas" fill={COLORS.dispatches} radius={[3,3,0,0]} />
+                <Bar dataKey="Mermas"  fill={COLORS.disposal}  radius={[3,3,0,0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -198,8 +198,8 @@ export default function Dashboard() {
           {/* Line chart — receipts trend */}
           <div className="dash-card">
             <div className="dash-card-header">
-              <h2>Collection Trend {year}</h2>
-              <p>kg collected per month</p>
+              <h2>Tendencia de recogidas {year}</h2>
+              <p>kg recogidos por mes</p>
             </div>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={chartData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -207,9 +207,9 @@ export default function Dashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 12, fill: "#6b7280" }} />
                 <YAxis tick={{ fontSize: 12, fill: "#6b7280" }} />
                 <Tooltip content={<CustomTooltip />} />
-                <Line type="monotone" dataKey="Receipts" stroke={COLORS.receipts}
+                <Line type="monotone" dataKey="Recogidas" stroke={COLORS.receipts}
                   strokeWidth={2.5} dot={{ r: 4, fill: COLORS.receipts }} />
-                <Line type="monotone" dataKey="Dispatches" stroke={COLORS.dispatches}
+                <Line type="monotone" dataKey="Salidas" stroke={COLORS.dispatches}
                   strokeWidth={2.5} dot={{ r: 4, fill: COLORS.dispatches }} strokeDasharray="5 3" />
               </LineChart>
             </ResponsiveContainer>
@@ -219,8 +219,8 @@ export default function Dashboard() {
           <div className="dash-card">
             <div className="dash-card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div>
-                <h2>Activity Calendar</h2>
-                <p>📥 Receipts &nbsp; 📦 Entrances &nbsp; 🚚 Dispatches</p>
+                <h2>Calendario actividad</h2>
+                <p>📥 Recogidas &nbsp; 📦 Entradas &nbsp; 🚚 Salidas</p>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <button onClick={() => setCalendarMonth((m) => m === 0 ? 11 : m - 1)}
@@ -235,7 +235,7 @@ export default function Dashboard() {
 
             {/* Day headers */}
             <div className="dash-cal-grid">
-              {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d) => (
+                {["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].map((d) => (
                 <div key={d} className="dash-cal-day-hdr">{d}</div>
               ))}
             </div>
@@ -269,21 +269,21 @@ export default function Dashboard() {
             {selectedDay && calendar[selectedDay] && (
               <div className="dash-cal-detail">
                 <p style={{ fontWeight: "700", fontSize: "13px", color: "#1a1a2e", marginBottom: "8px" }}>
-                  {new Date(selectedDay + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+                  {new Date(selectedDay + "T12:00:00").toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
                 </p>
                 {calendar[selectedDay].receipts && (
                   <p style={{ fontSize: "13px", color: COLORS.receipts }}>
-                    📥 {calendar[selectedDay].receipts.count} receipt{calendar[selectedDay].receipts.count !== 1 ? "s" : ""} — <strong>{calendar[selectedDay].receipts.kg} kg</strong>
+                    📥 {calendar[selectedDay].receipts.count} albarán{calendar[selectedDay].receipts.count !== 1 ? "es" : ""} — <strong>{calendar[selectedDay].receipts.kg} kg</strong>
                   </p>
                 )}
                 {calendar[selectedDay].entrances && (
                   <p style={{ fontSize: "13px", color: COLORS.entrances }}>
-                    📦 {calendar[selectedDay].entrances.count} entrance batch{calendar[selectedDay].entrances.count !== 1 ? "es" : ""} — <strong>{calendar[selectedDay].entrances.kg} kg</strong>
+                    📦 {calendar[selectedDay].entrances.count} lote{calendar[selectedDay].entrances.count !== 1 ? "s" : ""} de entrada — <strong>{calendar[selectedDay].entrances.kg} kg</strong>
                   </p>
                 )}
                 {calendar[selectedDay].dispatches && (
                   <p style={{ fontSize: "13px", color: COLORS.dispatches }}>
-                    🚚 {calendar[selectedDay].dispatches.count} dispatch{calendar[selectedDay].dispatches.count !== 1 ? "es" : ""} — <strong>{calendar[selectedDay].dispatches.kg} kg</strong>
+                    🚚 {calendar[selectedDay].dispatches.count} salida{calendar[selectedDay].dispatches.count !== 1 ? "s" : ""} — <strong>{calendar[selectedDay].dispatches.kg} kg</strong>
                   </p>
                 )}
               </div>
@@ -297,11 +297,11 @@ export default function Dashboard() {
           {/* Donut — supplier split */}
           <div className="dash-card">
             <div className="dash-card-header">
-              <h2>Collection by Type</h2>
-              <p>Horeca vs Urban — {year}</p>
+              <h2>Recogida por tipo</h2>
+              <p>Horeca vs Urbano — {year}</p>
             </div>
             {supplier_split.horeca_kg + supplier_split.urban_kg === 0 ? (
-              <p style={{ textAlign: "center", color: "#9ca3af", padding: "32px 0", fontSize: "14px" }}>No data yet</p>
+              <p style={{ textAlign: "center", color: "#9ca3af", padding: "32px 0", fontSize: "14px" }}>Sin datos todavía</p>
             ) : (
               <>
                 <ResponsiveContainer width="100%" height={180}>
@@ -337,11 +337,11 @@ export default function Dashboard() {
           {/* Tank status */}
           <div className="dash-card">
             <div className="dash-card-header">
-              <h2>Tank Status</h2>
-              <p>{totalStock.toLocaleString()} / {totalCapacity.toLocaleString()} kg total</p>
+              <h2>Estado de Depósitos</h2>
+              <p>{totalStock.toLocaleString()} / {totalCapacity.toLocaleString()} kg en total</p>
             </div>
             {tanks.length === 0 ? (
-              <p style={{ textAlign: "center", color: "#9ca3af", padding: "20px 0", fontSize: "14px" }}>No tanks configured</p>
+              <p style={{ textAlign: "center", color: "#9ca3af", padding: "20px 0", fontSize: "14px" }}>No hay depósitos configurados</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                 {tanks.map((t) => {
@@ -373,11 +373,11 @@ export default function Dashboard() {
           {/* Recent activity */}
           <div className="dash-card">
             <div className="dash-card-header">
-              <h2>Recent Activity</h2>
-              <p>Last 10 events</p>
+              <h2>Actividad Reciente</h2>
+              <p>Últimos 10 eventos</p>
             </div>
             {activity.length === 0 ? (
-              <p style={{ textAlign: "center", color: "#9ca3af", padding: "20px 0", fontSize: "14px" }}>No activity yet</p>
+              <p style={{ textAlign: "center", color: "#9ca3af", padding: "20px 0", fontSize: "14px" }}>Sin actividad todavía</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
                 {activity.map((a, idx) => {
@@ -402,7 +402,7 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <span style={{ fontSize: "11px", color: "#9ca3af", flexShrink: 0 }}>
-                        {new Date(a.date + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        {new Date(a.date + "T12:00:00").toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
                       </span>
                     </div>
                   );
