@@ -305,7 +305,7 @@ export default function Reports() {
       if (urbanFilters.date_to)      p.append("date_to",      urbanFilters.date_to);
       if (urbanFilters.period_label) p.append("period_label", urbanFilters.period_label);
       const res = await fetch(
-        `${config.apiUrl}reports/urban-collection/${urbanFilters.supplier_id}/pdf?${p}`,
+        `${config.apiUrl}/reports/urban-collection/${urbanFilters.supplier_id}/pdf?${p}`,
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
       if (!res.ok) throw new Error();
