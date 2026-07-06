@@ -14,10 +14,6 @@ DATABASE_URL = os.getenv(
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL)
-
-
-
 print(">>> Connecting to:", DATABASE_URL[:50], "...")  # debug
 
 engine = create_engine(DATABASE_URL)
