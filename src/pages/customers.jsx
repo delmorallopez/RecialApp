@@ -124,15 +124,14 @@ export default function Customers() {
     }
   };
 
-  // ── Delete ───────────────────────────────────────────────
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     try {
       await deleteCustomer(deleteTarget.id);
       setDeleteTarget(null);
       fetchCustomers();
-    } catch {
-      setError("No se pudo eliminar el cliente.");
+    } catch (err) {
+      setError(err.response?.data?.detail || "No se pudo eliminar el cliente.");
       setDeleteTarget(null);
     }
   };
