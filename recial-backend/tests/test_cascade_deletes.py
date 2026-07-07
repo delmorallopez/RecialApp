@@ -134,3 +134,25 @@ def test_delete_horeca_supplier(client, auth_headers):
                                name="Horeca Cascade Test")
     res = client.delete(f"/suppliers/{supplier['id']}", headers=auth_headers)
     assert res.status_code in (200, 204), res.text
+
+
+def test_delete_customer_with_dispatches_is_blocked(client, auth_headers):
+    # create a customer
+    cust = client.post("/customers/", json={"name": "Cliente Con Salidas"},
+                       headers=auth_headers)
+    assert cust.status_code in (200, 201), cust.text
+    customer_id = cust.json()["id"]
+
+    # create a dispatch for that customer
+    disp = client.post("/dispatches/", json={
+        "customer_id": customer_id,
+        "date": "2026-01-15",
+        "quantity": 500,
+        "entrance_ids": [],
+    }, headers=auth_headers)
+    assert disp.status_code == 201, disp.text
+
+    # deleting the customer must now be blocked
+    res = client.delete(f"/customers/{customer_id}", headers=auth_headers)
+    assert res.status_code == 400, res.text
+    assert "salida" in res.json()["detail"].lower()

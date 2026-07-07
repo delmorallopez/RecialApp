@@ -4,6 +4,7 @@ from typing import Optional
 
 from database import get_db
 from models.customers import Customer
+from models.dispatches import Dispatch
 from schemas.customers import CustomerCreate, CustomerUpdate, CustomerResponse, CustomerListResponse
 
 from auth import get_current_user, require_admin, require_manager_or_above
@@ -56,6 +57,15 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db), current_use
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
+
+    dispatch_count = db.query(Dispatch).filter(Dispatch.customer_id == customer_id).count()
+    if dispatch_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar este cliente porque tiene {dispatch_count} salida(s) registrada(s). "
+                f"Las salidas son registros de trazabilidad y deben conservarse."
+        )
+
     db.delete(customer)
     db.commit()
     return None
