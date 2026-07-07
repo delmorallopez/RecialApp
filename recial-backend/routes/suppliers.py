@@ -4,6 +4,7 @@ from typing import Optional
 
 from database import get_db
 from models.suppliers import Supplier, SupplierType
+from models.receipts import Receipt
 from schemas.suppliers import (
     SupplierCreate,
     SupplierUpdate,
@@ -84,6 +85,15 @@ def delete_supplier(supplier_id: int, db: Session = Depends(get_db), current_use
     supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
     if not supplier:
         raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    receipt_count = db.query(Receipt).filter(Receipt.supplier_id == supplier_id).count()
+    if receipt_count > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No se puede eliminar este proveedor porque tiene {receipt_count} albarán(es) registrado(s). "
+                f"Los albaranes son registros de trazabilidad y deben conservarse."
+        )
+
     db.delete(supplier)
     db.commit()
     return None
