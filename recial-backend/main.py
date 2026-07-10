@@ -26,6 +26,9 @@ app = FastAPI(
 from migrate_invoices import migrate_invoices
 migrate_invoices()
 
+from migrate_suppliers import migrate_suppliers
+migrate_suppliers()
+
 # ── CORS ─────────────────────────────────────────────────
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",

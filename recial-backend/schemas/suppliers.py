@@ -4,12 +4,16 @@ from datetime import datetime
 from enum import Enum
 from models.suppliers import SupplierType 
 
-
 class SupplierBase(BaseModel):
     supplier_type: SupplierType
     name: str
     cif: Optional[str] = None
     address: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    county: Optional[str] = None
+    contact_person: Optional[str] = None
     pickup_point: Optional[str] = None
     is_active: Optional[bool] = True
 
@@ -21,6 +25,11 @@ class SupplierUpdate(BaseModel):
     name: Optional[str] = None
     cif: Optional[str] = None
     address: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    city: Optional[str] = None
+    county: Optional[str] = None
+    contact_person: Optional[str] = None
     pickup_point: Optional[str] = None
     is_active: Optional[bool] = None
 

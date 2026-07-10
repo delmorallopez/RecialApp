@@ -12,6 +12,7 @@ import {
   deletePickupPoint,
 } from "../services/pickupPointsServices";
 import "../stylecss/customers.css";
+import API from "../services/api";
 
 const SUPPLIER_TYPES = ["Horeca", "Urban"];
 
@@ -20,6 +21,11 @@ const EMPTY_FORM = {
   name: "",
   cif: "",
   address: "",
+  email: "",
+  phone: "",
+  city: "",
+  county: "",
+  contact_person: "",
 };
 
 const EMPTY_PICKUP = { name: "", address: "", latitude: "", longitude: "" };
@@ -66,12 +72,20 @@ export default function Suppliers() {
   // Delete supplier
   const [deleteTarget, setDeleteTarget] = useState(null);
 
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importType, setImportType] = useState("Urban");   // Horeca | Urban
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState(null);
+  const [importError, setImportError] = useState(null);
   const [confirmClose, setConfirmClose] = useState(false);
 
   const handleOverlayClick = () => {
     const isDirty = form.name || form.cif || form.address ||
-                    newPickup.name || newPickup.address ||
-                    newPickup.latitude || newPickup.longitude;
+        form.email || form.phone || form.city || form.county ||
+        form.contact_person ||
+        newPickup.name || newPickup.address ||
+        newPickup.latitude || newPickup.longitude;
     if (isDirty) setConfirmClose(true);
     else closeModal();
   };
@@ -133,6 +147,11 @@ export default function Suppliers() {
       name: supplier.name || "",
       cif: supplier.cif || "",
       address: supplier.address || "",
+      email: supplier.email || "",
+      phone: supplier.phone || "",
+      city: supplier.city || "",
+      county: supplier.county || "",
+      contact_person: supplier.contact_person || "",
     });
     setFormError(null);
     setNewPickup(EMPTY_PICKUP);
@@ -256,6 +275,38 @@ export default function Suppliers() {
       setDeleteTarget(null);
     }
   };
+
+  const handleImport = async () => {
+    if (!importFile) { setImportError("Selecciona un archivo Excel primero."); return; }
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", importFile);
+      // API is your axios instance; adjust if you use fetch/config.apiUrl
+      const res = await API.post(
+        `/suppliers/import?supplier_type=${importType}`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+      setImportResult(res.data);
+      fetchSuppliers();                 // refresh the table
+    } catch (err) {
+      setImportError(err.response?.data?.detail || "No se pudo importar el archivo.");
+    } finally {
+      setImporting(false);
+    }
+  };
+  
+  const closeImport = () => {
+    setImportOpen(false);
+    setImportFile(null);
+    setImportResult(null);
+    setImportError(null);
+    setImporting(false);
+  };
+  
 
   // ── Helpers ──────────────────────────────────────────────
   const typeBadge = (type) => (
@@ -399,7 +450,13 @@ export default function Suppliers() {
           {total} proveedor{total !== 1 ? "es" : ""} registrado{total !== 1 ? "s" : ""}
         </p>
         </div>
-        <button className="btn-primary" onClick={openAdd}>+ Nuevo Proveedor</button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button className="btn-secondary" onClick={() => setImportOpen(true)}>
+            ⬆ Importar Excel
+          </button>
+          <button className="btn-primary" onClick={openAdd}>+ Nuevo Proveedor</button>
+        </div>
+
       </div>
 
       {/* Toolbar */}
@@ -431,7 +488,7 @@ export default function Suppliers() {
           <thead>
             <tr>
             <th>ID</th><th>Tipo</th><th>Nombre</th>
-            <th>CIF</th><th>Dirección</th><th>Puntos de Recogida</th><th>Acciones</th>
+            <th>CIF</th><th>Dirección</th><th>Ciudad</th><th>Puntos de Recogida</th><th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -446,9 +503,17 @@ export default function Suppliers() {
                 <tr key={s.id} className="table-row">
                   <td className="td-id">#{s.id}</td>
                   <td>{typeBadge(s.supplier_type)}</td>
-                  <td className="td-name">{s.name}</td>
+                  <td className="td-name">
+                    {s.name}
+                    {s.contact_person && (
+                      <span style={{ display: "block", fontSize: "12px", color: "#9ca3af", fontWeight: "400" }}>
+                        {s.contact_person}
+                      </span>
+                    )}
+                  </td>
                   <td className="td-cif">{s.cif || "—"}</td>
                   <td className="td-address">{s.address || "—"}</td>
+                  <td>{s.city || "—"}</td>
                   <td>
                     <button onClick={() => openPickupList(s)} style={{
                       background: s.supplier_type === "Urban" ? "#f0fdf4" : "#f8fafc",
@@ -526,6 +591,7 @@ export default function Suppliers() {
                 </div>
               </div>
             )}
+          
             <div className="modal-header" style={{ position: "sticky", top: 0, background: "#fff", zIndex: 9 }}>
               <h2>{editingSupplier ? "Editar Proveedor" : "Nuevo Proveedor"}</h2>
               <button className="modal-close" onClick={closeModal}>✕</button>
@@ -569,6 +635,41 @@ export default function Suppliers() {
                 <label>Direccion</label>
                 <input type="text" placeholder="Calle, Numero, Ciudad.."
                   value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              </div>
+
+              {/* Contact person */}
+              <div className="form-group">
+                <label>Persona de Contacto</label>
+                <input type="text" placeholder="Nombre de la persona de contacto"
+                  value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} />
+              </div>
+              
+              {/* Email + Phone */}
+              <div className="form-row">
+                <div className="form-group form-group--grow">
+                  <label>Email</label>
+                  <input type="email" placeholder="contacto@empresa.com"
+                    value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                </div>
+                <div className="form-group form-group--grow">
+                  <label>Teléfono</label>
+                  <input type="tel" placeholder="+34 600 000 000"
+                    value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                </div>
+              </div>
+
+              {/* City + County */}
+              <div className="form-row">
+                <div className="form-group form-group--grow">
+                  <label>Ciudad / Municipio</label>
+                  <input type="text" placeholder="Luque"
+                    value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+                </div>
+                <div className="form-group form-group--grow">
+                  <label>Provincia</label>
+                  <input type="text" placeholder="Córdoba"
+                    value={form.county} onChange={(e) => setForm({ ...form, county: e.target.value })} />
+                </div>
               </div>
 
               {formError && <p className="form-error">{formError}</p>}
@@ -856,7 +957,118 @@ export default function Suppliers() {
           </div>
         </div>
       )}
+      {/* ── Import Excel Modal ── */}
+      {importOpen && (
+        <div className="modal-overlay" onClick={closeImport}>
+          <div className="modal" style={{ maxWidth: "560px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <h2>⬆ Importar Proveedores desde Excel</h2>
+                <p style={{ fontSize: "13px", color: "#6b7280", margin: "2px 0 0" }}>
+                  Sube un archivo .xlsx con las columnas: Contact Person, name, cif,
+                  address, Town, County, Phone, EMAIL
+                </p>
+              </div>
+              <button className="modal-close" onClick={closeImport}>✕</button>
+            </div>
 
+            <div style={{ padding: "20px 24px 24px" }}>
+              {!importResult ? (
+                <>
+                  <div className="form-group" style={{ marginBottom: "16px" }}>
+                    <label>Tipo de Proveedor para todos los importados <span className="required">*</span></label>
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      {["Horeca", "Urban"].map((t) => (
+                        <button key={t} type="button"
+                          onClick={() => setImportType(t)}
+                          style={{
+                            flex: 1, padding: "10px", borderRadius: "8px", border: "1.5px solid",
+                            borderColor: importType === t ? "#2d7a4f" : "#e5e7eb",
+                            background: importType === t ? "#f0fdf4" : "#fff",
+                            color: importType === t ? "#15803d" : "#374151",
+                            fontWeight: "600", fontSize: "14px", cursor: "pointer",
+                          }}>{t === "Urban" ? "Urbano" : t}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="form-group" style={{ marginBottom: "16px" }}>
+                    <label>Archivo Excel (.xlsx) <span className="required">*</span></label>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xlsm"
+                      onChange={(e) => { setImportFile(e.target.files[0] || null); setImportError(null); }}
+                      style={{
+                        width: "100%", padding: "10px", border: "1.5px dashed #cbd5e1",
+                        borderRadius: "8px", fontSize: "14px", background: "#f8fafc",
+                      }}
+                    />
+                    {importFile && (
+                      <p style={{ fontSize: "12px", color: "#15803d", margin: "6px 0 0", fontWeight: "600" }}>
+                        ✓ {importFile.name}
+                      </p>
+                    )}
+                  </div>
+
+                  <div style={{
+                    background: "#eff6ff", border: "1.5px solid #bfdbfe",
+                    borderRadius: "8px", padding: "10px 14px", fontSize: "12px",
+                    color: "#1e40af", lineHeight: 1.6, marginBottom: "16px",
+                  }}>
+                    Los proveedores que ya existan (mismo nombre) se omitirán automáticamente.
+                    La primera fila del Excel debe ser la cabecera con los nombres de columna.
+                  </div>
+
+                  {importError && (
+                    <p className="form-error" style={{ marginBottom: "16px" }}>{importError}</p>
+                  )}
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn-secondary" onClick={closeImport}>Cancelar</button>
+                    <button type="button" className="btn-primary" onClick={handleImport} disabled={importing || !importFile}>
+                      {importing ? "Importando..." : "Importar"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{
+                    background: "#f0fdf4", border: "1.5px solid #86efac",
+                    borderRadius: "10px", padding: "16px", marginBottom: "16px", textAlign: "center",
+                  }}>
+                    <p style={{ fontSize: "28px", fontWeight: "800", color: "#15803d", margin: "0 0 4px" }}>
+                      {importResult.created_count}
+                    </p>
+                    <p style={{ fontSize: "14px", color: "#166534", margin: 0 }}>
+                      proveedores importados como <strong>{importResult.supplier_type === "Urban" ? "Urbano" : importResult.supplier_type}</strong>
+                    </p>
+                  </div>
+
+                  {importResult.skipped_count > 0 && (
+                    <div style={{
+                      background: "#fffbeb", border: "1.5px solid #fcd34d",
+                      borderRadius: "10px", padding: "12px 16px", marginBottom: "16px",
+                    }}>
+                      <p style={{ fontWeight: "700", color: "#92400e", fontSize: "13px", margin: "0 0 6px" }}>
+                        {importResult.skipped_count} omitido(s)
+                      </p>
+                      <ul style={{ fontSize: "12px", color: "#78350f", margin: 0, paddingLeft: "18px", maxHeight: "120px", overflowY: "auto" }}>
+                        {importResult.skipped.map((s, i) => (
+                          <li key={i}>{s.name} — {s.reason}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="modal-actions">
+                    <button type="button" className="btn-primary" onClick={closeImport}>Cerrar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

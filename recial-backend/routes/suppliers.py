@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile
 from sqlalchemy.orm import Session
 from typing import Optional
+from openpyxl import load_workbook
+from io import BytesIO
 
 from database import get_db
 from models.suppliers import Supplier, SupplierType
@@ -17,6 +19,28 @@ from models.users import User
 
 router = APIRouter(prefix="/suppliers", tags=["Suppliers"])
 
+# ── Supplier import helpers ─────────────────────────────────
+_COLUMN_MAP = {
+    "contact person": "contact_person",
+    "name":           "name",
+    "cif":            "cif",
+    "address":        "address",
+    "town":           "city",       # sheet "Town"   -> model city
+    "county":         "county",     # sheet "County" -> model county
+    "phone":          "phone",
+    "email":          "email",
+}
+
+
+def _clean(v):
+    """Trim strings; turn blanks/NaN into None. Strip trailing .0 from numbers
+    (Excel stores phone numbers and numeric-looking CIFs as floats)."""
+    if v is None:
+        return None
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    s = str(v).strip()
+    return s or None
 
 @router.get("/", response_model=SupplierListResponse)
 def get_suppliers(
@@ -97,3 +121,107 @@ def delete_supplier(supplier_id: int, db: Session = Depends(get_db), current_use
     db.delete(supplier)
     db.commit()
     return None
+
+
+
+@router.post("/import")
+async def import_suppliers(
+    file: UploadFile = File(...),
+    supplier_type: str = Query("Urban", description="Type to assign to all imported rows: Horeca or Urban"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    # 1. Validate the chosen supplier_type
+    try:
+        stype = SupplierType(supplier_type)   # "Horeca" or "Urban"
+    except ValueError:
+        raise HTTPException(status_code=400,
+            detail="supplier_type debe ser 'Horeca' o 'Urban'.")
+
+    # 2. Read the uploaded file
+    if not file.filename.lower().endswith((".xlsx", ".xlsm")):
+        raise HTTPException(status_code=400,
+            detail="El archivo debe ser un Excel (.xlsx).")
+    content = await file.read()
+    try:
+        wb = load_workbook(BytesIO(content), read_only=True, data_only=True)
+    except Exception as e:
+        raise HTTPException(status_code=400,
+            detail=f"No se pudo leer el archivo Excel: {type(e).__name__}: {e} (bytes recibidos: {len(content)})")
+    ws = wb.active  # first sheet ("POR PUEBLOS")
+
+    # 3. Read header row and build a column-index map
+    rows = ws.iter_rows(values_only=True)
+    try:
+        header = next(rows)
+    except StopIteration:
+        raise HTTPException(status_code=400, detail="El archivo está vacío.")
+
+    col_index = {}   # model_field -> column position
+    for idx, h in enumerate(header):
+        key = _clean(h)
+        if key and key.lower() in _COLUMN_MAP:
+            col_index[_COLUMN_MAP[key.lower()]] = idx
+
+    if "name" not in col_index:
+        raise HTTPException(status_code=400,
+            detail="No se encontró la columna 'name' en el archivo.")
+
+    # 4. Existing names (dedupe key) — lowercased for case-insensitive match
+    existing_names = {
+        (n or "").strip().lower()
+        for (n,) in db.query(Supplier.name).all()
+    }
+
+    created, skipped = [], []
+    seen_in_file = set()
+
+    # 5. Parse + validate every row BEFORE inserting
+    to_insert = []
+    for i, row in enumerate(rows, start=2):  # row 2 = first data row
+        rec = {}
+        for field, idx in col_index.items():
+            rec[field] = _clean(row[idx]) if idx < len(row) else None
+
+        name = rec.get("name")
+        if not name:
+            continue  # silently skip fully-blank rows
+
+        key = name.lower()
+
+        # Skip duplicates already in DB
+        if key in existing_names:
+            skipped.append({"name": name, "reason": "ya existe"})
+            continue
+        # Skip duplicates within the same file
+        if key in seen_in_file:
+            skipped.append({"name": name, "reason": "duplicado en el archivo"})
+            continue
+        seen_in_file.add(key)
+
+        to_insert.append(Supplier(
+            supplier_type=stype,
+            name=name,
+            cif=rec.get("cif"),
+            address=rec.get("address"),
+            city=rec.get("city"),
+            county=rec.get("county"),
+            phone=rec.get("phone"),
+            email=rec.get("email"),
+            contact_person=rec.get("contact_person"),
+            is_active=True,
+        ))
+        created.append(name)
+
+    # 6. Insert all valid rows in one transaction
+    if to_insert:
+        db.add_all(to_insert)
+        db.commit()
+
+    return {
+        "created_count": len(created),
+        "skipped_count": len(skipped),
+        "created": created,
+        "skipped": skipped,
+        "supplier_type": stype.value,
+    }
