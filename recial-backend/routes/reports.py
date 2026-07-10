@@ -1243,6 +1243,9 @@ def _generate_customers_pdf(customers: list) -> bytes:
     return buf.read()
 
 
+from io import BytesIO
+
+
 def _generate_suppliers_pdf(suppliers: list) -> bytes:
     from reportlab.lib.pagesizes import A4, landscape
     from reportlab.lib.units import mm
@@ -1275,50 +1278,36 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
     horeca = [s for s in suppliers if s.get("supplier_type") == "Horeca"]
     urban  = [s for s in suppliers if s.get("supplier_type") == "Urban"]
 
-    # ── Logo ─────────────────────────────────────────────────
-    if os.path.exists(_LOGO):
-        c.drawImage(_LOGO, RIGHT - 40*mm, TOP - 16*mm,
-                    width=40*mm, height=16*mm,
-                    preserveAspectRatio=True, mask='auto')
+    # ── Shared page header (drawn on every page) ─────────────
+    def draw_header():
+        if os.path.exists(_LOGO):
+            c.drawImage(_LOGO, RIGHT - 40*mm, TOP - 16*mm,
+                        width=40*mm, height=16*mm,
+                        preserveAspectRatio=True, mask='auto')
+        c.setFont("Helvetica-Bold", 16)
+        c.setFillColor(GREEN_DARK)
+        c.drawString(LEFT, TOP - 8*mm, "LISTADO PROVEEDORES")
 
-    # ── Title ─────────────────────────────────────────────────
-    c.setFont("Helvetica-Bold", 16)
-    c.setFillColor(GREEN_DARK)
-    c.drawString(LEFT, TOP - 8*mm, "LISTADO PROVEEDORES")
+        c.setFont("Helvetica", 9)
+        c.setFillColor(GRAY)
+        c.drawString(LEFT, TOP - 14*mm,
+            f"Generado: {date_type.today().strftime('%d/%m/%Y')}  ·  "
+            f"{len(suppliers)} proveedores  ·  {len(horeca)} Horeca  ·  {len(urban)} Urbano")
 
-    c.setFont("Helvetica", 9)
-    c.setFillColor(GRAY)
-    c.drawString(LEFT, TOP - 14*mm,
-        f"Generado: {date_type.today().strftime('%d/%m/%Y')}  ·  "
-        f"{len(suppliers)} proveedores  ·  {len(horeca)} Horeca  ·  {len(urban)} Urbano")
+        c.setStrokeColor(GREEN)
+        c.setLineWidth(2)
+        c.line(LEFT, TOP - 18*mm, RIGHT, TOP - 18*mm)
 
-    c.setStrokeColor(GREEN)
-    c.setLineWidth(2)
-    c.line(LEFT, TOP - 18*mm, RIGHT, TOP - 18*mm)
+    def draw_footer():
+        c.setFont("Helvetica", 8)
+        c.setFillColor(GRAY)
+        c.drawCentredString(w / 2, 8*mm,
+           "RECICLAJES RECIAL S.L.  ·  C/ Carrera 56, 14880 Luque (Córdoba)  ·  info@recial.es")
 
-    table_y = TOP - 24*mm
-
-    # ── Main suppliers table ──────────────────────────────────
     headers = ["#", "Nombre", "Tipo", "CIF", "Dirección", "Email", "Teléfono", "Puntos"]
-    data    = [headers]
-
-    for i, s in enumerate(suppliers, 1):
-        pp_count = len(s.get("pickup_points", []))
-        stype = s.get("supplier_type")
-        data.append([
-            str(i),
-            s.get("name") or "—",
-            ("Urbano" if stype == "Urban" else stype) or "—",
-            s.get("cif") or "—",
-            s.get("address") or "—",
-            s.get("email") or "—",
-            s.get("phone") or "—",
-            str(pp_count) if pp_count > 0 else "—",
-        ])
-
     col_widths = [10*mm, 55*mm, 22*mm, 28*mm, 65*mm, 48*mm, 25*mm, 18*mm]
-    tbl = Table(data, colWidths=col_widths, repeatRows=1)
-    tbl.setStyle(TableStyle([
+
+    base_style = [
         ("BACKGROUND",    (0,0), (-1,0),  GREEN_DARK),
         ("TEXTCOLOR",     (0,0), (-1,0),  WHITE),
         ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
@@ -1337,31 +1326,83 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
         ("TOPPADDING",    (0,0), (-1,-1), 2),
         ("BOTTOMPADDING", (0,0), (-1,-1), 2),
         ("LEFTPADDING",   (0,0), (-1,-1), 4),
-    ]))
+    ]
 
-    # Colour Type column per row
+    # Rows per page — first page has less room (title area), rest have more.
+    ROWS_FIRST_PAGE = 26
+    ROWS_OTHER_PAGE = 30
+
+    # Build the flat list of data rows (excluding header — added per chunk)
+    all_rows = []
     for i, s in enumerate(suppliers, 1):
-        is_horeca = s.get("supplier_type") == "Horeca"
-        bg = colors.HexColor("#eff6ff") if is_horeca else colors.HexColor("#f0fdf4")
-        fc = BLUE if is_horeca else GREEN
-        tbl.setStyle(TableStyle([
-            ("BACKGROUND", (2,i), (2,i), bg),
-            ("TEXTCOLOR",  (2,i), (2,i), fc),
-            ("FONTNAME",   (2,i), (2,i), "Helvetica-Bold"),
-        ]))
+        pp_count = len(s.get("pickup_points", []))
+        stype = s.get("supplier_type")
+        all_rows.append([
+            str(i),
+            s.get("name") or "—",
+            ("Urbano" if stype == "Urban" else stype) or "—",
+            s.get("cif") or "—",
+            s.get("address") or "—",
+            s.get("email") or "—",
+            s.get("phone") or "—",
+            str(pp_count) if pp_count > 0 else "—",
+        ])
 
-    tbl_w, tbl_h = tbl.wrapOn(c, RIGHT - LEFT, h)
-    tbl.drawOn(c, LEFT, table_y - tbl_h)
+    # Slice rows into pages
+    chunks = []
+    idx = 0
+    first = True
+    while idx < len(all_rows):
+        size = ROWS_FIRST_PAGE if first else ROWS_OTHER_PAGE
+        chunks.append((idx, all_rows[idx:idx + size]))
+        idx += size
+        first = False
+    if not chunks:
+        chunks = [(0, [])]  # no suppliers: still render an (empty) page
 
-    # ── Urban pickup points section ───────────────────────────
-    pickup_y = table_y - tbl_h - 14*mm
+    # Draw each chunk on its own page
+    for page_num, (start_idx, chunk_rows) in enumerate(chunks):
+        draw_header()
+        table_y = TOP - 24*mm
+
+        data = [headers] + chunk_rows
+        tbl = Table(data, colWidths=col_widths, repeatRows=1)
+        style = list(base_style)
+
+        # Per-row Type-column colouring for the rows on THIS page.
+        # chunk row r (1-based in table) maps to supplier start_idx + (r-1).
+        for r in range(1, len(chunk_rows) + 1):
+            supplier = suppliers[start_idx + (r - 1)]
+            is_horeca = supplier.get("supplier_type") == "Horeca"
+            bg = colors.HexColor("#eff6ff") if is_horeca else colors.HexColor("#f0fdf4")
+            fc = BLUE if is_horeca else GREEN
+            style.append(("BACKGROUND", (2, r), (2, r), bg))
+            style.append(("TEXTCOLOR",  (2, r), (2, r), fc))
+            style.append(("FONTNAME",   (2, r), (2, r), "Helvetica-Bold"))
+
+        tbl.setStyle(TableStyle(style))
+        tbl_w, tbl_h = tbl.wrapOn(c, RIGHT - LEFT, h)
+        tbl.drawOn(c, LEFT, table_y - tbl_h)
+
+        draw_footer()
+
+        # Page number (bottom-right)
+        c.setFont("Helvetica", 8)
+        c.setFillColor(GRAY)
+        c.drawRightString(RIGHT, 8*mm, f"Página {page_num + 1} de {len(chunks)}")
+
+        c.showPage()  # end this page
+
+    # ── Urban pickup points section (own page(s)) ─────────────
     urban_with_points = [s for s in urban if s.get("pickup_points")]
 
     if urban_with_points:
+        draw_header()
+        pickup_y = TOP - 24*mm
+
         c.setFont("Helvetica-Bold", 12)
         c.setFillColor(GREEN_DARK)
         c.drawString(LEFT, pickup_y, "PROVEEDORES URBANOS — PUNTOS DE RECOGIDA CON COORDENADAS")
-
         c.setStrokeColor(GREEN_LIGHT)
         c.setLineWidth(1.5)
         c.line(LEFT, pickup_y - 3*mm, RIGHT, pickup_y - 3*mm)
@@ -1370,7 +1411,13 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
         for s in urban_with_points:
             pps = s.get("pickup_points", [])
 
-            # Supplier sub-header
+            # New page if we're running low
+            if pickup_y < 45*mm:
+                draw_footer()
+                c.showPage()
+                draw_header()
+                pickup_y = TOP - 24*mm
+
             c.setFont("Helvetica-Bold", 10)
             c.setFillColor(GREEN)
             c.drawString(LEFT, pickup_y, f"  {s['name']}")
@@ -1379,8 +1426,8 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
             pp_headers = ["Nombre del Punto de Recogida", "Latitud", "Longitud", "Observaciones"]
             pp_data    = [pp_headers]
             for pp in pps:
-                lat = f"{pp['latitude']:.6f}"  if pp.get("latitude")  else "—"
-                lng = f"{pp['longitude']:.6f}" if pp.get("longitude") else "—"
+                lat = f"{float(pp['latitude']):.6f}"  if pp.get("latitude")  not in (None, "") else "—"
+                lng = f"{float(pp['longitude']):.6f}" if pp.get("longitude") not in (None, "") else "—"
                 pp_data.append([
                     pp.get("name") or "—",
                     lat,
@@ -1407,16 +1454,20 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
                 ("TOPPADDING",    (0,0), (-1,-1), 2),
                 ("BOTTOMPADDING", (0,0), (-1,-1), 2),
             ]))
-
             pp_tbl_w, pp_tbl_h = pp_tbl.wrapOn(c, RIGHT - LEFT, h)
+
+            # If this table won't fit, start a new page first
+            if pickup_y - pp_tbl_h < 20*mm:
+                draw_footer()
+                c.showPage()
+                draw_header()
+                pickup_y = TOP - 24*mm
+
             pp_tbl.drawOn(c, LEFT, pickup_y - pp_tbl_h)
             pickup_y -= pp_tbl_h + 8*mm
 
-    # ── Footer ────────────────────────────────────────────────
-    c.setFont("Helvetica", 8)
-    c.setFillColor(GRAY)
-    c.drawCentredString(w / 2, 8*mm,
-       "RECICLAJES RECIAL S.L.  ·  C/ Carrera 56, 14880 Luque (Córdoba)  ·  info@recial.es")
+        draw_footer()
+        c.showPage()
 
     c.save()
     buf.seek(0)
