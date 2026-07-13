@@ -639,8 +639,8 @@ export default function Suppliers() {
 
               {/* Contact person */}
               <div className="form-group">
-                <label>Persona de Contacto</label>
-                <input type="text" placeholder="Nombre de la persona de contacto"
+                <label>Razón Social</label>
+                <input type="text" placeholder="Razón Social"
                   value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} />
               </div>
               
