@@ -31,12 +31,9 @@ migrate_suppliers()
 
 # ── CORS ─────────────────────────────────────────────────
 ALLOWED_ORIGINS = [
-    o.strip()
-    for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+    o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
     if o.strip()
 ]
-import sys
-print(">>> ALLOWED_ORIGINS =", ALLOWED_ORIGINS, file=sys.stderr, flush=True)
 
 app.add_middleware(
     CORSMiddleware,
