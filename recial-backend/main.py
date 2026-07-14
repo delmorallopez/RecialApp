@@ -34,6 +34,8 @@ ALLOWED_ORIGINS = [
     o.strip() for o in os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
     if o.strip()
 ]
+print(">>> ALLOWED_ORIGINS =", ALLOWED_ORIGINS, flush=True)
+print(">>> RAW ENV =", repr(os.getenv("ALLOWED_ORIGINS")), flush=True)
 
 app.add_middleware(
     CORSMiddleware,
