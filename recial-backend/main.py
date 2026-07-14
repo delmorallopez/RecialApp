@@ -40,6 +40,7 @@ print(">>> RAW ENV =", repr(os.getenv("ALLOWED_ORIGINS")), flush=True)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https://.*\.grads\.hosting\.cyf\.academy",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
