@@ -16,6 +16,7 @@ from schemas.suppliers import (
 
 from auth import get_current_user, require_admin, require_manager_or_above
 from models.users import User
+from models.pickupPoints import PickupPoint 
 
 router = APIRouter(prefix="/suppliers", tags=["Suppliers"])
 
@@ -31,16 +32,62 @@ _COLUMN_MAP = {
     "email":          "email",
 }
 
+# ── Supplier import helpers ─────────────────────────────────
 
 def _clean(v):
-    """Trim strings; turn blanks/NaN into None. Strip trailing .0 from numbers
-    (Excel stores phone numbers and numeric-looking CIFs as floats)."""
+    """Trim strings; blanks -> None. Strip trailing .0 from Excel numerics."""
     if v is None:
         return None
     if isinstance(v, float) and v.is_integer():
         v = int(v)
     s = str(v).strip()
     return s or None
+
+
+def _to_float(v):
+    """
+    Parse a coordinate. Handles real floats, strings, and Spanish comma
+    decimals ("-4,63600" -> -4.636). Returns None if empty/unparseable.
+    """
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).strip()
+    if not s:
+        return None
+    s = s.replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+_COUNTY_FIXES = {"CORODBA": "CORDOBA"}
+
+
+def _fix_county(v):
+    if not v:
+        return None
+    return _COUNTY_FIXES.get(v.upper(), v)
+
+
+def _header_map(header_row):
+    """Map lowercased header names -> column index."""
+    idx = {}
+    for i, h in enumerate(header_row):
+        k = _clean(h)
+        if k:
+            idx[k.lower()] = i
+    return idx
+
+
+def _get(row, hmap, key):
+    """Fetch a cell by header name (case-insensitive)."""
+    i = hmap.get(key.lower())
+    if i is None or i >= len(row):
+        return None
+    return row[i]
 
 @router.get("/", response_model=SupplierListResponse)
 def get_suppliers(
@@ -127,101 +174,238 @@ def delete_supplier(supplier_id: int, db: Session = Depends(get_db), current_use
 @router.post("/import")
 async def import_suppliers(
     file: UploadFile = File(...),
-    supplier_type: str = Query("Urban", description="Type to assign to all imported rows: Horeca or Urban"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    # 1. Validate the chosen supplier_type
-    try:
-        stype = SupplierType(supplier_type)   # "Horeca" or "Urban"
-    except ValueError:
-        raise HTTPException(status_code=400,
-            detail="supplier_type debe ser 'Horeca' o 'Urban'.")
-
-    # 2. Read the uploaded file
     if not file.filename.lower().endswith((".xlsx", ".xlsm")):
-        raise HTTPException(status_code=400,
-            detail="El archivo debe ser un Excel (.xlsx).")
+        raise HTTPException(status_code=400, detail="El archivo debe ser un Excel (.xlsx).")
+ 
     content = await file.read()
     try:
         wb = load_workbook(BytesIO(content), read_only=True, data_only=True)
     except Exception as e:
         raise HTTPException(status_code=400,
-            detail=f"No se pudo leer el archivo Excel: {type(e).__name__}: {e} (bytes recibidos: {len(content)})")
-    ws = wb.active  # first sheet ("POR PUEBLOS")
-
-    # 3. Read header row and build a column-index map
-    rows = ws.iter_rows(values_only=True)
-    try:
-        header = next(rows)
-    except StopIteration:
-        raise HTTPException(status_code=400, detail="El archivo está vacío.")
-
-    col_index = {}   # model_field -> column position
-    for idx, h in enumerate(header):
-        key = _clean(h)
-        if key and key.lower() in _COLUMN_MAP:
-            col_index[_COLUMN_MAP[key.lower()]] = idx
-
-    if "name" not in col_index:
-        raise HTTPException(status_code=400,
-            detail="No se encontró la columna 'name' en el archivo.")
-
-    # 4. Existing names (dedupe key) — lowercased for case-insensitive match
+            detail=f"No se pudo leer el archivo Excel: {type(e).__name__}")
+ 
+    # Existing supplier names (dedupe key — CIF is NOT unique in this data)
     existing_names = {
-        (n or "").strip().lower()
-        for (n,) in db.query(Supplier.name).all()
+        (n or "").strip().lower() for (n,) in db.query(Supplier.name).all()
     }
-
-    created, skipped = [], []
-    seen_in_file = set()
-
-    # 5. Parse + validate every row BEFORE inserting
-    to_insert = []
-    for i, row in enumerate(rows, start=2):  # row 2 = first data row
-        rec = {}
-        for field, idx in col_index.items():
-            rec[field] = _clean(row[idx]) if idx < len(row) else None
-
-        name = rec.get("name")
-        if not name:
-            continue  # silently skip fully-blank rows
-
-        key = name.lower()
-
-        # Skip duplicates already in DB
-        if key in existing_names:
-            skipped.append({"name": name, "reason": "ya existe"})
-            continue
-        # Skip duplicates within the same file
-        if key in seen_in_file:
-            skipped.append({"name": name, "reason": "duplicado en el archivo"})
-            continue
-        seen_in_file.add(key)
-
-        to_insert.append(Supplier(
-            supplier_type=stype,
-            name=name,
-            cif=rec.get("cif"),
-            address=rec.get("address"),
-            city=rec.get("city"),
-            county=rec.get("county"),
-            phone=rec.get("phone"),
-            email=rec.get("email"),
-            contact_person=rec.get("contact_person"),
-            is_active=True,
-        ))
-        created.append(name)
-
-    # 6. Insert all valid rows in one transaction
-    if to_insert:
-        db.add_all(to_insert)
-        db.commit()
-
+ 
+    created_horeca, created_urban, skipped = [], [], []
+    total_pickup_points = 0
+    seen = set()
+ 
+    # ══════════════════════════════════════════════════════════════════════
+    # SHEET 1 — HORECA (flat; coordinates on the supplier)
+    # ══════════════════════════════════════════════════════════════════════
+    if "Horeca" in wb.sheetnames:
+        ws = wb["Horeca"]
+        rows = ws.iter_rows(values_only=True)
+        header = next(rows, None)
+        if header:
+            hmap = _header_map(header)
+            for row in rows:
+                name = _clean(_get(row, hmap, "name"))
+                if not name:
+                    continue
+                key = name.lower()
+                if key in existing_names:
+                    skipped.append({"name": name, "reason": "ya existe"}); continue
+                if key in seen:
+                    skipped.append({"name": name, "reason": "duplicado en el archivo"}); continue
+                seen.add(key)
+ 
+                db.add(Supplier(
+                    supplier_type=SupplierType.HORECA,
+                    name=name,
+                    cif=_clean(_get(row, hmap, "cif")),
+                    address=_clean(_get(row, hmap, "address")),
+                    city=_clean(_get(row, hmap, "Town")),
+                    county=_fix_county(_clean(_get(row, hmap, "County"))),
+                    contact_person=_clean(_get(row, hmap, "Contact Person")),
+                    phone=_clean(_get(row, hmap, "Phone")),
+                    email=_clean(_get(row, hmap, "EMAIL")),
+                    latitude=_to_float(_get(row, hmap, "Latitude")),
+                    longitude=_to_float(_get(row, hmap, "Longitude")),
+                    is_active=True,
+                ))
+                created_horeca.append(name)
+ 
+    # ══════════════════════════════════════════════════════════════════════
+    # SHEET 2 — URBAN (parent supplier row, then its pickup-point rows)
+    # ══════════════════════════════════════════════════════════════════════
+    if "Urban" in wb.sheetnames:
+        ws = wb["Urban"]
+        rows = ws.iter_rows(values_only=True)
+        header = next(rows, None)
+        if header:
+            hmap = _header_map(header)
+            current = None          # the Supplier object we're attaching points to
+ 
+            for row in rows:
+                name = _clean(_get(row, hmap, "name"))
+                pp_name = _clean(_get(row, hmap, "Pickup point"))
+ 
+                # ── Parent row: a new council/supplier ──
+                if name:
+                    key = name.lower()
+                    if key in existing_names or key in seen:
+                        reason = "ya existe" if key in existing_names else "duplicado en el archivo"
+                        skipped.append({"name": name, "reason": reason})
+                        current = None          # skip its pickup points too
+                        continue
+                    seen.add(key)
+ 
+                    current = Supplier(
+                        supplier_type=SupplierType.URBAN,
+                        name=name,
+                        cif=_clean(_get(row, hmap, "cif")),
+                        address=_clean(_get(row, hmap, "Address")),
+                        city=_clean(_get(row, hmap, "Town")),
+                        county=_fix_county(_clean(_get(row, hmap, "County"))),
+                        contact_person=_clean(_get(row, hmap, "Contact Person")),
+                        is_active=True,
+                    )
+                    db.add(current)
+                    created_urban.append(name)
+                    continue
+ 
+                # ── Child row: a pickup point for the current supplier ──
+                if pp_name and current is not None:
+                    current.pickup_points.append(PickupPoint(
+                        name=pp_name,
+                        address=_clean(_get(row, hmap, "Address")),
+                        latitude=_to_float(_get(row, hmap, "Latitude")),
+                        longitude=_to_float(_get(row, hmap, "Longitude")),
+                    ))
+                    total_pickup_points += 1
+ 
+    db.commit()
+ 
     return {
-        "created_count": len(created),
-        "skipped_count": len(skipped),
-        "created": created,
-        "skipped": skipped,
-        "supplier_type": stype.value,
+        "created_count":  len(created_horeca) + len(created_urban),
+        "horeca_count":   len(created_horeca),
+        "urban_count":    len(created_urban),
+        "pickup_points":  total_pickup_points,
+        "skipped_count":  len(skipped),
+        "skipped":        skipped,
     }
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

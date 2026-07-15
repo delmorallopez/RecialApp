@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum, Float 
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from database import Base
@@ -21,6 +21,8 @@ class Supplier(Base):
     city = Column(String(100), nullable=True)
     county = Column(String(100), nullable=True)
     contact_person = Column(String(120), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
     pickup_point = Column(String(200), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -1084,10 +1084,12 @@ def get_suppliers_list_pdf(
     if supplier_type: query = query.filter(Supplier.supplier_type == supplier_type)
     if supplier_id:   query = query.filter(Supplier.id == supplier_id)
     suppliers = query.order_by(Supplier.supplier_type, Supplier.name).all()
-
+        
     data = []
     for s in suppliers:
-        pps = [{"name": pp.name, "latitude": pp.latitude, "longitude": pp.longitude, "notes": getattr(pp, "notes", "")}
+        pps = [{"name": pp.name, "latitude": pp.latitude, "longitude": pp.longitude,
+                "address": getattr(pp, "address", None),
+                "notes": getattr(pp, "notes", "")}
                for pp in (s.pickup_points or [])]
         data.append({
                 "name":          s.name,
@@ -1096,8 +1098,10 @@ def get_suppliers_list_pdf(
                 "address":       getattr(s, "address", None),
                 "email":         getattr(s, "email", None),
                 "phone":         getattr(s, "phone", None),
+                "latitude":      getattr(s, "latitude", None),  
+                "longitude":     getattr(s, "longitude", None),   
                 "pickup_points": pps,
-            })
+            })    
 
     pdf = _generate_suppliers_pdf(data)
     return StreamingResponse(BytesIO(pdf), media_type="application/pdf",
@@ -1254,31 +1258,38 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
     from reportlab.platypus import Table, TableStyle
     from datetime import date as date_type
     import os
-
+ 
     buf = BytesIO()
     w, h = landscape(A4)
     c = canvas.Canvas(buf, pagesize=landscape(A4))
     LEFT  = 15 * mm
     RIGHT = w - 15 * mm
-
+    TOP   = h - 15 * mm
+ 
     GREEN_DARK  = colors.HexColor("#1e3d2a")
     GREEN       = colors.HexColor("#2d7a4f")
     GREEN_LIGHT = colors.HexColor("#8dc63f")
     LGRAY       = colors.HexColor("#f2f2f2")
+    PARENT_BG   = colors.HexColor("#eef6f0")   # tint for supplier (parent) rows
     DARK        = colors.HexColor("#1a1a2e")
     GRAY        = colors.HexColor("#6b7280")
     WHITE       = colors.white
     BLUE        = colors.HexColor("#1d4ed8")
-
+ 
     _ASSETS = os.path.join(os.path.dirname(__file__), "../assets")
     _LOGO   = os.path.join(_ASSETS, "LogoRecial.png")
-
-    TOP = h - 15 * mm
-
+ 
     horeca = [s for s in suppliers if s.get("supplier_type") == "Horeca"]
     urban  = [s for s in suppliers if s.get("supplier_type") == "Urban"]
-
-    # ── Shared page header (drawn on every page) ─────────────
+ 
+    def fmt(v):
+        if v in (None, ""):
+            return "—"
+        try:
+            return f"{float(str(v).replace(',', '.')):.5f}"
+        except (ValueError, TypeError):
+            return "—"
+ 
     def draw_header():
         if os.path.exists(_LOGO):
             c.drawImage(_LOGO, RIGHT - 40*mm, TOP - 16*mm,
@@ -1286,193 +1297,130 @@ def _generate_suppliers_pdf(suppliers: list) -> bytes:
                         preserveAspectRatio=True, mask='auto')
         c.setFont("Helvetica-Bold", 16)
         c.setFillColor(GREEN_DARK)
-        c.drawString(LEFT, TOP - 8*mm, "LISTADO PROVEEDORES")
-
+        c.drawString(LEFT, TOP - 8*mm, "LISTADO DE PROVEEDORES")
         c.setFont("Helvetica", 9)
         c.setFillColor(GRAY)
         c.drawString(LEFT, TOP - 14*mm,
             f"Generado: {date_type.today().strftime('%d/%m/%Y')}  ·  "
             f"{len(suppliers)} proveedores  ·  {len(horeca)} Horeca  ·  {len(urban)} Urbano")
-
         c.setStrokeColor(GREEN)
         c.setLineWidth(2)
         c.line(LEFT, TOP - 18*mm, RIGHT, TOP - 18*mm)
-
-    def draw_footer():
+ 
+    def draw_footer(page_num):
         c.setFont("Helvetica", 8)
         c.setFillColor(GRAY)
         c.drawCentredString(w / 2, 8*mm,
            "RECICLAJES RECIAL S.L.  ·  C/ Carrera 56, 14880 Luque (Córdoba)  ·  info@recial.es")
-
-    headers = ["#", "Nombre", "Tipo", "CIF", "Dirección", "Email", "Teléfono", "Puntos"]
-    col_widths = [10*mm, 55*mm, 22*mm, 28*mm, 65*mm, 48*mm, 25*mm, 18*mm]
-
-    base_style = [
-        ("BACKGROUND",    (0,0), (-1,0),  GREEN_DARK),
-        ("TEXTCOLOR",     (0,0), (-1,0),  WHITE),
-        ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
-        ("FONTSIZE",      (0,0), (-1,0),  9),
-        ("ALIGN",         (0,0), (-1,0),  "CENTER"),
-        ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
-        ("FONTNAME",      (0,1), (-1,-1), "Helvetica"),
-        ("FONTSIZE",      (0,1), (-1,-1), 8),
-        ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGRAY]),
-        ("TEXTCOLOR",     (0,1), (-1,-1), DARK),
-        ("ALIGN",         (0,0), (0,-1),  "CENTER"),
-        ("ALIGN",         (2,0), (2,-1),  "CENTER"),
-        ("ALIGN",         (7,0), (7,-1),  "CENTER"),
-        ("ALIGN",         (1,1), (1,-1),  "LEFT"),
-        ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#d1d5db")),
-        ("TOPPADDING",    (0,0), (-1,-1), 2),
-        ("BOTTOMPADDING", (0,0), (-1,-1), 2),
-        ("LEFTPADDING",   (0,0), (-1,-1), 4),
-    ]
-
-    # Rows per page — first page has less room (title area), rest have more.
-    ROWS_FIRST_PAGE = 26
-    ROWS_OTHER_PAGE = 30
-
-    # Build the flat list of data rows (excluding header — added per chunk)
-    all_rows = []
-    for i, s in enumerate(suppliers, 1):
-        pp_count = len(s.get("pickup_points", []))
+        c.drawRightString(RIGHT, 8*mm, f"Página {page_num}")
+ 
+    # ── Build the flat row list, tagging each row as parent or child ────────
+    # Each entry: (cells, is_parent, supplier_type)
+    headers = ["Tipo", "Nombre", "Dirección", "Ciudad", "Latitud", "Longitud"]
+    rows = []
+    for s in suppliers:
         stype = s.get("supplier_type")
-        all_rows.append([
-            str(i),
-            s.get("name") or "—",
-            ("Urbano" if stype == "Urban" else stype) or "—",
-            s.get("cif") or "—",
-            s.get("address") or "—",
-            s.get("email") or "—",
-            s.get("phone") or "—",
-            str(pp_count) if pp_count > 0 else "—",
-        ])
-
-    # Slice rows into pages
+        type_label = "Urbano" if stype == "Urban" else (stype or "—")
+        pps = s.get("pickup_points") or []
+ 
+        if pps:
+            # Parent row (supplier), coords blank — the points carry coords
+            rows.append(([
+                type_label,
+                s.get("name") or "—",
+                s.get("address") or "—",
+                s.get("city") or "—",
+                "—",
+                "—",
+            ], True, stype))
+            # Child rows (pickup points), indented under Nombre
+            for pp in pps:
+                rows.append(([
+                    "",
+                    "    " + (pp.get("name") or "—"),         # indent
+                    pp.get("address") or "—",
+                    s.get("city") or "—",
+                    fmt(pp.get("latitude")),
+                    fmt(pp.get("longitude")),
+                ], False, stype))
+        else:
+            # No pickup points (Horeca): single row with supplier's own coords
+            rows.append(([
+                type_label,
+                s.get("name") or "—",
+                s.get("address") or "—",
+                s.get("city") or "—",
+                fmt(s.get("latitude")),
+                fmt(s.get("longitude")),
+            ], True, stype))
+ 
+    col_widths = [22*mm, 70*mm, 78*mm, 40*mm, 30*mm, 30*mm]
+ 
+    # ── Paginate: ~30 rows per page ─────────────────────────────────────────
+    ROWS_FIRST = 28
+    ROWS_OTHER = 32
+ 
     chunks = []
     idx = 0
     first = True
-    while idx < len(all_rows):
-        size = ROWS_FIRST_PAGE if first else ROWS_OTHER_PAGE
-        chunks.append((idx, all_rows[idx:idx + size]))
+    while idx < len(rows):
+        size = ROWS_FIRST if first else ROWS_OTHER
+        chunks.append(rows[idx:idx + size])
         idx += size
         first = False
     if not chunks:
-        chunks = [(0, [])]  # no suppliers: still render an (empty) page
-
-    # Draw each chunk on its own page
-    for page_num, (start_idx, chunk_rows) in enumerate(chunks):
+        chunks = [[]]
+ 
+    page = 1
+    for ci, chunk in enumerate(chunks):
+        if ci > 0:
+            draw_footer(page)
+            c.showPage()
+            page += 1
         draw_header()
-        table_y = TOP - 24*mm
-
-        data = [headers] + chunk_rows
+ 
+        data = [headers] + [r[0] for r in chunk]
         tbl = Table(data, colWidths=col_widths, repeatRows=1)
-        style = list(base_style)
-
-        # Per-row Type-column colouring for the rows on THIS page.
-        # chunk row r (1-based in table) maps to supplier start_idx + (r-1).
-        for r in range(1, len(chunk_rows) + 1):
-            supplier = suppliers[start_idx + (r - 1)]
-            is_horeca = supplier.get("supplier_type") == "Horeca"
-            bg = colors.HexColor("#eff6ff") if is_horeca else colors.HexColor("#f0fdf4")
-            fc = BLUE if is_horeca else GREEN
-            style.append(("BACKGROUND", (2, r), (2, r), bg))
-            style.append(("TEXTCOLOR",  (2, r), (2, r), fc))
-            style.append(("FONTNAME",   (2, r), (2, r), "Helvetica-Bold"))
-
+ 
+        style = [
+            ("BACKGROUND",    (0,0), (-1,0),  GREEN_DARK),
+            ("TEXTCOLOR",     (0,0), (-1,0),  WHITE),
+            ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
+            ("FONTSIZE",      (0,0), (-1,0),  9),
+            ("ALIGN",         (0,0), (-1,0),  "CENTER"),
+            ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
+            ("FONTSIZE",      (0,1), (-1,-1), 8),
+            ("TEXTCOLOR",     (0,1), (-1,-1), DARK),
+            ("ALIGN",         (0,0), (0,-1),  "CENTER"),   # Tipo centred
+            ("ALIGN",         (4,0), (5,-1),  "CENTER"),   # coords centred
+            ("ALIGN",         (1,1), (3,-1),  "LEFT"),
+            ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#e0e0e0")),
+            ("TOPPADDING",    (0,0), (-1,-1), 2),
+            ("BOTTOMPADDING", (0,0), (-1,-1), 2),
+            ("LEFTPADDING",   (0,0), (-1,-1), 4),
+        ]
+ 
+        # Per-row styling: parent rows bold + tinted; child rows normal
+        for ri, (cells, is_parent, stype) in enumerate(chunk, start=1):
+            if is_parent:
+                style.append(("BACKGROUND", (0, ri), (-1, ri), PARENT_BG))
+                style.append(("FONTNAME",   (0, ri), (-1, ri), "Helvetica-Bold"))
+                # colour the Tipo cell
+                fc = BLUE if stype == "Horeca" else GREEN
+                style.append(("TEXTCOLOR", (0, ri), (0, ri), fc))
+            else:
+                style.append(("FONTNAME", (0, ri), (-1, ri), "Helvetica"))
+                style.append(("TEXTCOLOR", (1, ri), (1, ri), GRAY))  # muted point name
+ 
         tbl.setStyle(TableStyle(style))
-        tbl_w, tbl_h = tbl.wrapOn(c, RIGHT - LEFT, h)
-        tbl.drawOn(c, LEFT, table_y - tbl_h)
-
-        draw_footer()
-
-        # Page number (bottom-right)
-        c.setFont("Helvetica", 8)
-        c.setFillColor(GRAY)
-        c.drawRightString(RIGHT, 8*mm, f"Página {page_num + 1} de {len(chunks)}")
-
-        c.showPage()  # end this page
-
-    # ── Urban pickup points section (own page(s)) ─────────────
-    urban_with_points = [s for s in urban if s.get("pickup_points")]
-
-    if urban_with_points:
-        draw_header()
-        pickup_y = TOP - 24*mm
-
-        c.setFont("Helvetica-Bold", 12)
-        c.setFillColor(GREEN_DARK)
-        c.drawString(LEFT, pickup_y, "PROVEEDORES URBANOS — PUNTOS DE RECOGIDA CON COORDENADAS")
-        c.setStrokeColor(GREEN_LIGHT)
-        c.setLineWidth(1.5)
-        c.line(LEFT, pickup_y - 3*mm, RIGHT, pickup_y - 3*mm)
-        pickup_y -= 10*mm
-
-        for s in urban_with_points:
-            pps = s.get("pickup_points", [])
-
-            # New page if we're running low
-            if pickup_y < 45*mm:
-                draw_footer()
-                c.showPage()
-                draw_header()
-                pickup_y = TOP - 24*mm
-
-            c.setFont("Helvetica-Bold", 10)
-            c.setFillColor(GREEN)
-            c.drawString(LEFT, pickup_y, f"  {s['name']}")
-            pickup_y -= 6*mm
-
-            pp_headers = ["Nombre del Punto de Recogida", "Latitud", "Longitud", "Observaciones"]
-            pp_data    = [pp_headers]
-            for pp in pps:
-                lat = f"{float(pp['latitude']):.6f}"  if pp.get("latitude")  not in (None, "") else "—"
-                lng = f"{float(pp['longitude']):.6f}" if pp.get("longitude") not in (None, "") else "—"
-                pp_data.append([
-                    pp.get("name") or "—",
-                    lat,
-                    lng,
-                    pp.get("notes") or "",
-                ])
-
-            pp_col_widths = [80*mm, 38*mm, 38*mm, 115*mm]
-            pp_tbl = Table(pp_data, colWidths=pp_col_widths)
-            pp_tbl.setStyle(TableStyle([
-                ("BACKGROUND",    (0,0), (-1,0),  GREEN_LIGHT),
-                ("TEXTCOLOR",     (0,0), (-1,0),  WHITE),
-                ("FONTNAME",      (0,0), (-1,0),  "Helvetica-Bold"),
-                ("FONTSIZE",      (0,0), (-1,0),  8),
-                ("ALIGN",         (0,0), (-1,0),  "CENTER"),
-                ("FONTNAME",      (0,1), (-1,-1), "Helvetica"),
-                ("FONTSIZE",      (0,1), (-1,-1), 8),
-                ("ROWBACKGROUNDS",(0,1), (-1,-1), [WHITE, LGRAY]),
-                ("TEXTCOLOR",     (0,1), (-1,-1), DARK),
-                ("VALIGN",        (0,0), (-1,-1), "MIDDLE"),
-                ("ALIGN",         (1,1), (2,-1),  "CENTER"),
-                ("GRID",          (0,0), (-1,-1), 0.4, colors.HexColor("#d1d5db")),
-                ("LEFTPADDING",   (0,0), (-1,-1), 4),
-                ("TOPPADDING",    (0,0), (-1,-1), 2),
-                ("BOTTOMPADDING", (0,0), (-1,-1), 2),
-            ]))
-            pp_tbl_w, pp_tbl_h = pp_tbl.wrapOn(c, RIGHT - LEFT, h)
-
-            # If this table won't fit, start a new page first
-            if pickup_y - pp_tbl_h < 20*mm:
-                draw_footer()
-                c.showPage()
-                draw_header()
-                pickup_y = TOP - 24*mm
-
-            pp_tbl.drawOn(c, LEFT, pickup_y - pp_tbl_h)
-            pickup_y -= pp_tbl_h + 8*mm
-
-        draw_footer()
-        c.showPage()
-
+        _, tbl_h = tbl.wrapOn(c, RIGHT - LEFT, h)
+        tbl.drawOn(c, LEFT, (TOP - 24*mm) - tbl_h)
+ 
+    draw_footer(page)
+    c.showPage()
     c.save()
     buf.seek(0)
     return buf.read()
-
 
 @router.get("/customers-list")
 def get_customers_list(db: Session = Depends(get_db)):

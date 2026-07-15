@@ -8,6 +8,8 @@ _EXPECTED_COLUMNS = {
     "city":           "VARCHAR(100)",
     "county":         "VARCHAR(100)",
     "contact_person": "VARCHAR(120)",
+    "latitude":       "DOUBLE PRECISION",
+    "longitude":      "DOUBLE PRECISION",
 }
 
 def migrate_suppliers():

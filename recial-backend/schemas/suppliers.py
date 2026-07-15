@@ -14,6 +14,8 @@ class SupplierBase(BaseModel):
     city: Optional[str] = None
     county: Optional[str] = None
     contact_person: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     pickup_point: Optional[str] = None
     is_active: Optional[bool] = True
 
@@ -30,6 +32,8 @@ class SupplierUpdate(BaseModel):
     city: Optional[str] = None
     county: Optional[str] = None
     contact_person: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     pickup_point: Optional[str] = None
     is_active: Optional[bool] = None
 
