@@ -3,9 +3,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import engine, Base
-from routes import customers, suppliers, receipts, entrances, tanks, dispatches, reports, pickupPoints, dashboard, auth, invoices, documents, traceability
+from routes import customers, suppliers, receipts, entrances, tanks, dispatches, reports, pickupPoints, dashboard, auth, invoices, documents, traceability, historical
 from models.customers import Customer
 from models.suppliers import Supplier
+from models.historical_summary import HistoricalMonthlySummary, HistoricalYearMeta
 
 # ── Debug — remove after confirming DB connects ──────────
 print(">>> DATABASE_URL =", os.getenv("DATABASE_URL", "NOT SET"))
@@ -60,7 +61,7 @@ app.include_router(auth.router)
 app.include_router(invoices.router)
 app.include_router(documents.router)
 app.include_router(traceability.router)
-
+app.include_router(historical.router) 
 # ── Health check ──────────────────────────────────────────
 @app.get("/", tags=["Health"])
 def root():
