@@ -16,6 +16,7 @@ const MENU = [
   { path: "/tanks",      label: "Depósitos",   icon: "🛢️" },
   { path: "/map",        label: "Logística",   icon: "🗺️" },
   { divider: true, label: "ANÁLISIS" },
+  { label: "Histórico", path: "/historical", icon: "📚" },
 ];
 
 const REPORTS_ITEMS = [

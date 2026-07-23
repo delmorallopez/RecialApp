@@ -33,7 +33,7 @@ from database import get_db
 from auth import require_admin
 from models.users import User
 
-router = APIRouter(prefix="/historical", tags=["Historical"])
+router = APIRouter(tags=["Historical"])
 
 
 _RECEIPT_ID = re.compile(r'^\d+(/\d+)?[AB]$')     # 01B, 85/1A
@@ -223,3 +223,75 @@ async def historical_import_route(
         return await import_historical_mass_balance(file, db, replace=replace)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
+
+@router.get("/historical/years")
+def list_historical_years(db: Session = Depends(get_db)):
+    """All imported years with their headline totals, newest first."""
+    metas = db.query(HistoricalYearMeta).order_by(
+        HistoricalYearMeta.year.desc()).all()
+ 
+    return {
+        "total": len(metas),
+        "years": [
+            {
+                "year": m.year,
+                "opening_stock_kg": m.opening_stock_kg,
+                "total_receipts_kg": m.total_receipts_kg,
+                "total_dispatches_kg": m.total_dispatches_kg,
+                "total_disposal_kg": m.total_disposal_kg,
+                "source_file": m.source_file,
+                "imported_at": m.imported_at.isoformat() if m.imported_at else None,
+            }
+            for m in metas
+        ],
+    }
+ 
+ 
+@router.get("/historical/{year}")
+def get_historical_year(year: int, db: Session = Depends(get_db)):
+    """One year: monthly receipt breakdown + yearly totals."""
+    meta = db.query(HistoricalYearMeta).filter(
+        HistoricalYearMeta.year == year).first()
+    if not meta:
+        raise HTTPException(status_code=404,
+            detail=f"No hay datos históricos importados para {year}.")
+ 
+    months = db.query(HistoricalMonthlySummary).filter(
+        HistoricalMonthlySummary.year == year
+    ).order_by(HistoricalMonthlySummary.month).all()
+ 
+    return {
+        "year": year,
+        "opening_stock_kg": meta.opening_stock_kg,
+        "total_receipts_kg": meta.total_receipts_kg,
+        "total_dispatches_kg": meta.total_dispatches_kg,
+        "total_disposal_kg": meta.total_disposal_kg,
+        "source_file": meta.source_file,
+        "months": [
+            {
+                "month": m.month,
+                "receipts_kg": m.receipts_kg,
+                "receipts_count": m.receipts_count,
+            }
+            for m in months
+        ],
+    }
+ 
+ 
+@router.delete("/historical/{year}", status_code=204)
+def delete_historical_year(
+    year: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Remove an imported year (e.g. to re-import a corrected file)."""
+    deleted = db.query(HistoricalMonthlySummary).filter(
+        HistoricalMonthlySummary.year == year).delete()
+    db.query(HistoricalYearMeta).filter(
+        HistoricalYearMeta.year == year).delete()
+    db.commit()
+    if deleted == 0:
+        raise HTTPException(status_code=404,
+            detail=f"No hay datos históricos para {year}.")
+    return None

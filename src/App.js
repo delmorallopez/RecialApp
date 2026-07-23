@@ -15,6 +15,7 @@ import Settings from "./pages/settings";
 import Tanks from "./pages/tanks";
 import Home from "./pages/home";
 import Map from "./Map";
+import Historical from "./pages/historical";
 
 import "./App.css";
 import "./index.css";
@@ -102,6 +103,7 @@ const router = createBrowserRouter([
       { path: "map",        element: <Map /> },
       { path: "reports",    element: <Reports /> },
       { path: "settings",   element: <Settings /> },
+      { path: "historical", element: <Historical /> },
     ],
   },
 ]);
