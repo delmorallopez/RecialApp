@@ -8,9 +8,6 @@ from models.customers import Customer
 from models.suppliers import Supplier
 from models.historical_summary import HistoricalMonthlySummary, HistoricalYearMeta
 
-# ── Debug — remove after confirming DB connects ──────────
-print(">>> DATABASE_URL =", os.getenv("DATABASE_URL", "NOT SET"))
-
 # Create all tables on startup
 Base.metadata.create_all(bind=engine)
 
