@@ -4,7 +4,7 @@ A full-stack web application for tracking **Used Cooking Oil (UCO)** collection,
 
 Built to replace manual spreadsheet tracking with a proper traceability system that meets **ISCC certification** requirements.
 
-🌐 **Live App:** [https://mzpqhv96qjkzktfr4qxl9im5.hosting.codeyourfuture.io](https://mzpqhv96qjkzktfr4qxl9im5.hosting.codeyourfuture.io)
+🌐 **Live App:** https://app.recial.es/login
 
 ---
 
