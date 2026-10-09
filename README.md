@@ -10,8 +10,17 @@ Built to replace manual spreadsheet tracking with a proper traceability system t
 
 ## 📸 Screenshots
 
-> Dashboard · Suppliers · Reports · Quarterly Closing
+> Dashboard · Suppliers · Reports · Historic
 <img width="1286" height="711" alt="image" src="https://github.com/user-attachments/assets/5313e2df-6a9e-4298-8a59-245760d7d25e" />
+
+<img width="1324" height="857" alt="image" src="https://github.com/user-attachments/assets/49942d8c-80de-4ea8-a287-1ddafbb8d89f" />
+
+<img width="1354" height="916" alt="image" src="https://github.com/user-attachments/assets/eefa1f89-9e61-4297-861e-f39a2f2db98c" />
+
+<img width="1355" height="417" alt="image" src="https://github.com/user-attachments/assets/92c8e7d0-7942-4de7-b069-7b73c8607ca2" />
+
+
+
 
 
 ---
