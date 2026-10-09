@@ -18,8 +18,8 @@ Built to replace manual spreadsheet tracking with a proper traceability system t
 
 ```
 ┌─────────────────┐        ┌─────────────────┐        ┌─────────────────┐
-│   React Frontend │ ──────▶│  FastAPI Backend │ ──────▶│   PostgreSQL DB  │
-│   (nginx/Docker) │  HTTP  │  (uvicorn/Docker)│  ORM   │   (Coolify)      │
+│   React Frontend  ──────▶  FastAPI Backend  ──────▶   PostgreSQL DB  
+│   (nginx/Docker)  HTTP     (uvicorn/Docker)  ORM      (Coolify)      
 └─────────────────┘        └─────────────────┘        └─────────────────┘
 ```
 
