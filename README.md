@@ -17,10 +17,12 @@ Built to replace manual spreadsheet tracking with a proper traceability system t
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐        ┌─────────────────┐        ┌─────────────────┐
-   React Frontend  ──────▶   FastAPI Backend   ──────▶   PostgreSQL DB  
-   (nginx/Docker)   HTTP     (uvicorn/Docker)   ORM       (Coolify)      
-└─────────────────┘        └─────────────────┘        └─────────────────┘
+┌──────────────────┐       ┌──────────────────┐       ┌──────────────────┐
+│                  │       │                  │       │                  │
+│  React Frontend  │ HTTP  │  FastAPI Backend │  ORM  │  PostgreSQL DB   │
+│  (nginx/Docker)  │──────▶│ (uvicorn/Docker) │──────▶│    (Coolify)     │
+│                  │       │                  │       │                  │
+└──────────────────┘       └──────────────────┘       └──────────────────┘
 ```
 
 **Frontend:** React · Recharts · Axios · React Router  
